@@ -1,0 +1,22 @@
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ============ Playwright MCP 临时产物 ============
+# 浏览器自动化过程中的页面快照、控制台日志（每次运行都会重新生成）
+.playwright-mcp/
+
+# ============ 测试运行输出（每次运行都会重新生成，不纳入版本控制） ============
+# script_runner.py 生成的失败截图
+screenshots/
+
+# script_runner.py 生成的执行报告（Markdown + _history.csv 历史）
+reports/
+
+# 早期工作流遗留的根目录截图（当前截图统一存放到 screenshots/）
+/*.png
+
+# ============ Claude Code 本地个人配置（不共享给团队） ============
+# settings.json 为团队共享配置应提交，settings.local.json 为本地个人配置
+.claude/settings.local.json

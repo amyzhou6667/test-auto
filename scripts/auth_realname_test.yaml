@@ -1,0 +1,221 @@
+# 测试脚本 — 实名认证流程
+# 需求: REQ-048
+# 适用范围: 设置 > 账户页 > 实名认证
+# 数据构造: 注册未认证测试账号 / 复用已有账号
+
+metadata:
+  id: SCRIPT-AUTH-001
+  name: 实名认证 — 状态展示与认证流程
+  req: REQ-048
+  version: 1.1
+  tags: [实名认证, 个人中心, 合规]
+  data_dependencies:
+    - 未认证账号 (用于测试完整认证流程)
+    - 已认证账号 (用于测试已认证状态)
+
+params:
+  base_url: http://117.187.178.247:8000
+  api_base: http://nlb-krnq68w0wqo9hkhbtp.cn-hangzhou.nlb.aliyuncsslb.com
+  account_verified: true
+  test_account:
+    create_if_missing: false
+    phone: 13616510594
+
+data_setup:
+  # 尝试注册未认证账号（如果 register API 存在）
+  - id: SETUP-001
+    name: 准备未认证测试账号
+    type: api_call
+    enabled: false  # 默认关闭，需要时手动改为 true
+    request:
+      method: POST
+      url: "/api/user/register"
+      body:
+        phone: "199{random(8)}"
+        password: "test123456"
+    verify:
+      - path: code
+        expect: 0
+
+steps:
+  # ── 前置：导航到设置页 ──
+  - id: NAV-001
+    name: 打开设置弹窗 > 账户页面
+    actions:
+      - type: click
+        target: "getByText('用户0594')"
+      - type: wait
+        ms: 500
+      - type: click
+        target: "getByText('设置')"
+      - type: wait
+        ms: 1000
+
+  # ── 实名认证状态展示 ──
+  - id: UI-001
+    name: 实名认证入口位置
+    actions:
+      - type: assert_text
+        selector: 实名认证
+        should_exist: true
+    verify:
+      - element: 实名认证
+        should_exist: true
+    api_check:
+      - url: /api/user/binding/list
+        method: GET
+        expected_code: 200
+        verify:
+          - path: code
+            expect: 0
+
+  # ── 已认证状态展示 ──
+  - id: UI-002
+    name: "已认证状态展示 (当前: {account_verified})"
+    actions:
+      - type: evaluate
+        code: |
+          const el = document.body;
+          return {
+            hasAuthLabel: el.innerText.includes('实名认证'),
+            hasVerifiedStatus: el.innerText.includes('已认证'),
+            hasNameExposed: el.innerText.includes('周'),
+            hasGoAuth: el.innerText.includes('去认证'),
+          };
+    verify:
+      - path: hasVerifiedStatus
+        expect: true
+        condition: account_verified == true
+      - path: hasGoAuth
+        expect: false
+        condition: account_verified == true
+      - path: hasNameExposed
+        expect: false
+        condition: account_verified == true
+
+  # ── 未认证状态（当 account_verified = false 时执行） ──
+  - id: UI-003
+    name: 未认证状态展示
+    condition: account_verified == false
+    actions:
+      - type: evaluate
+        code: |
+          return document.body.innerText.includes('去认证');
+    verify:
+      - path: result
+        expect: true
+
+  # ── 充值按钮前置校验（未认证时） ──
+  - id: FLOW-001
+    name: "充值按钮前置校验 (未认证→确认层→去认证)"
+    condition: account_verified == false
+    actions:
+      - type: click
+        target: "getByRole('button', { name: '充值' })"
+      - type: wait
+        ms: 1000
+      - type: assert_text
+        selector: 充值需要先完成实名认证
+        should_exist: true
+      - type: assert_text
+        selector: 暂不充值
+        should_exist: true
+      - type: assert_text
+        selector: 去认证
+        should_exist: true
+
+  # ── 认证弹窗输入校验（姓名） ──
+  - id: BOUNDARY-NAME-001
+    name: 姓名输入 — 空值校验
+    condition: account_verified == false
+    actions:
+      - type: click
+        target: "getByText('去认证')"
+      - type: fill
+        target: "#name-input"
+        value: ""
+      - type: fill
+        target: "#idcard-input"
+        value: ""
+    verify:
+      - element: 提交认证
+        should_be: disabled
+
+  - id: BOUNDARY-NAME-002
+    name: 姓名输入 — 1个字符（低于下限）
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#name-input"
+        value: "张"
+    verify:
+      - element: 提交认证
+        should_be: disabled
+      - element: 错误提示
+        text_contains: "请输入正确的姓名"
+        optional: true
+
+  - id: BOUNDARY-NAME-003
+    name: 姓名输入 — 合法值
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#name-input"
+        value: "张三"
+      - type: fill
+        target: "#idcard-input"
+        value: "110101199001011234"
+    verify:
+      - element: 提交认证
+        should_be: enabled
+
+  - id: BOUNDARY-NAME-004
+    name: 姓名输入 — 含数字/英文字符
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#name-input"
+        value: "张三123"
+    verify:
+      - element: 提交认证
+        should_be: disabled
+      - element: 错误提示
+        text_contains: "仅支持中文"
+        optional: true
+
+  # ── 认证弹窗输入校验（身份证号） ──
+  - id: BOUNDARY-ID-001
+    name: 身份证号 — 17位（低于18位）
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#name-input"
+        value: "张三"
+      - type: fill
+        target: "#idcard-input"
+        value: "11010119900101123"
+    verify:
+      - element: 提交认证
+        should_be: disabled
+
+  - id: BOUNDARY-ID-002
+    name: 身份证号 — 19位（高于18位）
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#idcard-input"
+        value: "1101011990010112345"
+    verify:
+      - element: 提交认证
+        should_be: disabled
+
+  - id: BOUNDARY-ID-003
+    name: 身份证号 — 含字母
+    condition: account_verified == false
+    actions:
+      - type: fill
+        target: "#idcard-input"
+        value: "11010119900101123X"
+    verify:
+      - element: 提交认证
+        should_be: enabled  # X 是合法的身份证尾号

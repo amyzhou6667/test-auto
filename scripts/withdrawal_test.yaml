@@ -1,0 +1,249 @@
+# 测试脚本 — 生产者提现流程
+# 需求: REQ-047
+# 适用范围: 生产者中心 > 结算提现
+# 数据构造: 需要不同状态的账号（有待审核/有余额/无余额）
+
+metadata:
+  id: SCRIPT-WITHDRAWAL-001
+  name: 生产者提现 — 金额校验与结算流程
+  req: REQ-047
+  version: 1.1
+  tags: [结算, 提现, 金额校验, 银行卡]
+  data_dependencies:
+    - 已实名认证的生产者账号（有可结算收益 > 1000）
+    - 已有银行卡记录（非首次提现）
+
+params:
+  base_url: http://117.187.178.247:8000
+  api_base: http://nlb-krnq68w0wqo9hkhbtp.cn-hangzhou.nlb.aliyuncsslb.com
+  withdraw_url: /producer-center
+  has_pending: false
+  has_balance: true
+  withdrawable_balance: 11130
+  test_amounts:
+    - { value: "999",  expected_disabled: true,  expected_error: "必须为 100 的倍数" }
+    - { value: "1000", expected_disabled: false, expected_error: null }
+    - { value: "1050", expected_disabled: true,  expected_error: "必须为 100 的倍数" }
+    - { value: "1100", expected_disabled: false, expected_error: null }
+    - { value: "11200", expected_disabled: true, expected_error: "不能超过可结算余额" }
+    - { value: "",     expected_disabled: true,  expected_error: null }
+
+data_setup:
+  # 检查收益概况，确认有足够余额
+  - id: SETUP-001
+    name: 检查可结算余额是否足够
+    type: api_call
+    request:
+      method: GET
+      url: "/api/user/creator-center/revenue/summary"
+    verify:
+      - path: data.revenueCreditsWithdrawable
+        expect_gt: 1000
+
+  # 如果余额不足，尝试构造测试数据
+  - id: SETUP-002
+    name: 余额不足时补充收益数据
+    type: api_call
+    enabled: false  # 需要后端支持，默认关闭
+    condition: withdrawable_balance < 1000
+    request:
+      method: POST
+      url: "/api/user/credits/admin-add"
+      body:
+        amount: 20000
+        reason: "测试数据构造"
+    verify:
+      - path: code
+        expect: 0
+
+  # 检查提现准备数据
+  - id: SETUP-003
+    name: 检查银行卡信息就绪
+    type: api_call
+    request:
+      method: GET
+      url: "/api/user/creator-center/withdrawal/prepare"
+    verify:
+      - path: data.realNameVerified
+        expect: true
+      - path: data.payoutAccount.bound
+        expect: true
+
+steps:
+  # ── 前置步骤 ──
+  - id: NAV-001
+    name: 导航到生产者中心
+    actions:
+      - type: navigate
+        url: "{base_url}{withdraw_url}"
+        wait_until: domcontentloaded
+    api_check:
+      - url: /api/user/creator-center/revenue/summary
+        method: GET
+        expected_code: 200
+        verify:
+          - path: code
+            expect: 0
+
+  - id: UI-001
+    name: 生产者中心页面展示
+    actions:
+      - type: assert_text
+        selector: heading "生产者中心"
+        should_exist: true
+      - type: assert_text
+        selector: 可结算收益
+        should_exist: true
+      - type: assert_text
+        selector: 结算
+        should_exist: true
+    verify:
+      - element: 结算按钮
+        should_be: enabled
+
+  # ── 结算弹窗 ──
+  - id: FUNC-001
+    name: 打开结算弹窗
+    actions:
+      - type: click
+        target: "getByRole('button', { name: '结算' })"
+    api_check:
+      - url: /api/user/creator-center/withdrawal/prepare
+        method: GET
+        expected_code: 200
+        verify:
+          - path: data.realNameVerified
+            expect: true
+          - path: data.payoutAccount.bankCardLast4
+            expect: "1393"
+          - path: data.withdrawableCredits
+            expect_gt: 1000
+    verify:
+      - element: "#withdraw-amount-input"
+        should_exist: true
+      - element: 提交结算申请
+        should_be: disabled
+
+  # ── 金额校验：低于最小值且非100倍数 ──
+  - id: BOUNDARY-001
+    name: 金额输入 999（低于最低值+非100倍数）
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "999"
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: disabled
+      - element: 错误提示
+        text_contains: "必须为 100 的倍数"
+
+  # ── 金额校验：合法最小值 ──
+  - id: BOUNDARY-002
+    name: 金额输入 1000（合法最小值）
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "1000"
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: enabled
+
+  # ── 金额校验：非100倍数 ──
+  - id: BOUNDARY-003
+    name: 金额输入 1050（非100倍数）
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "1050"
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: disabled
+      - element: 错误提示
+        text_contains: "必须为 100 的倍数"
+
+  # ── 金额校验：合法值 ──
+  - id: BOUNDARY-004
+    name: 金额输入 1100（合法）
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "1100"
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: enabled
+
+  # ── 金额校验：超过可结算余额 ──
+  - id: BOUNDARY-005
+    name: "金额输入 11200（超上限 {withdrawable_balance}）"
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "11200"
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: disabled
+      - element: 错误提示
+        text_contains: "不能超过可结算余额"
+
+  # ── 金额校验：空值 ──
+  - id: BOUNDARY-006
+    name: 金额输入 空值
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: ""
+      - type: wait
+        ms: 500
+    verify:
+      - element: 提交结算申请
+        should_be: disabled
+
+  # ── 银行卡信息验证 ──
+  - id: CARD-001
+    name: 银行卡信息展示（已有记录）
+    actions:
+      - type: fill
+        target: "#withdraw-amount-input"
+        value: "1000"
+    verify:
+      - element: 开户行
+        text_contains: 招商银行
+        should_exist: true
+      - element: 变更提示
+        text_contains: 请联系客服
+        should_exist: true
+    api_check:
+      - url: /api/user/creator-center/withdrawal/prepare
+        method: GET
+        expected_code: 200
+        verify:
+          - path: data.payoutAccount.bankCardLast4
+            expect: "1393"
+          - path: data.payoutAccount.bankName
+            expect: "招商银行杭州西兴科创支行"
+          - path: data.payoutAccount.locked
+            expect: true
+
+  # ── 有待审核申请时按钮置灰 ──
+  - id: FLOW-001
+    name: "有待审核申请时结算按钮状态 (当前: {has_pending})"
+    condition: has_pending == true
+    actions:
+      - type: click
+        target: "getByRole('button', { name: 'Close' })"
+      - type: assert_text
+        selector: 正在审核中
+        should_exist: true
+    verify:
+      - element: 结算按钮
+        should_be: disabled

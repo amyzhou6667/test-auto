@@ -1,0 +1,25 @@
+# 通用测试模板 — API 接口验证
+# 用法：修改 metadata 和 api_checks
+
+metadata:
+  id: TPL-API-001
+  name: API 接口验证模板
+  version: 1.0
+  tags: [模板, API]
+
+params:
+  base_url: http://xxx
+  api_base: http://api.xxx
+
+data_setup:
+  - id: API-CHECK
+    name: 验证接口数据
+    type: api_call
+    request:
+      method: GET
+      url: "/api/xxx"
+    verify:
+      - path: code
+        expect: 0
+      - path: data.xxx
+        expect_not_null: true

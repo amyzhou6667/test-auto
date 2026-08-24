@@ -1,0 +1,15 @@
+# 通用测试模板 — 列表/表格展示
+# 用法：修改 selector 和预期的列/字段
+
+metadata:
+  id: TPL-LIST-001
+  name: 列表展示验证模板
+  version: 1.0
+  tags: [模板, 列表, 表格]
+
+params:
+  base_url: http://xxx
+  list_selector: ".table"
+  expected_columns: []
+  empty_text: "暂无数据"
+  has_pagination: false

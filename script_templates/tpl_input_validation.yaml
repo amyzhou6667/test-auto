@@ -1,0 +1,23 @@
+# 通用测试模板 — 输入框校验
+# 用法：复制此文件，修改 params 和 steps 中的具体字段名/选择器
+
+metadata:
+  id: TPL-INPUT-001
+  name: 输入框校验模板
+  version: 1.0
+  tags: [模板, 输入框, 边界值]
+
+params:
+  base_url: http://xxx
+  field_name: "字段名"
+  input_selector: "#input-id"
+  submit_selector: "#submit-btn"
+  min_length: null      # 最小字符数
+  max_length: null      # 最大字符数
+  min_value: null       # 最小值（数值输入）
+  max_value: null       # 最大值（数值输入）
+  step: null            # 步进（如 100 的倍数）
+  required: true
+  test_values:
+    - { value: "合法值", expected_enabled: true }
+    - { value: "", expected_enabled: false }
