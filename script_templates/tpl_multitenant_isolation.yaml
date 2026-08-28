@@ -1,0 +1,163 @@
+# 测试模板 — 多租户数据隔离验证 (CoreBridge FR-1 / FR-2)
+# 用法：复制此文件到 scripts/，修改 params 中的 base_url / api_base / 租户与管理员账号，按目标系统调整 URL 与选择器。
+# 覆盖核心规则: 平台管理员可见所有租户数据; 租户管理员/用户仅可见当前租户数据; A 租户数据 B 租户不可见。
+
+metadata:
+  id: TPL-MT-001
+  name: 多租户数据隔离验证
+  req: REQ-MULTITENANT
+  version: 1.0
+  tags: [模板, 多租户, 隔离, FR-1, FR-2]
+
+params:
+  base_url: http://目标地址
+  api_base: http://api.目标地址
+  platform_admin:
+    account: admin
+    password: "***"          # 平台管理员密码,按需填写
+  tenant_a:
+    name: "A租户-XX科技"
+    code: "tenant-a"
+    admin_account: "admina"
+    admin_password: "Admina@123"
+  tenant_b:
+    name: "B租户-YY集团"
+    code: "tenant-b"
+    admin_account: "adminb"
+    admin_password: "Adminb@123"
+  resource_name: "隔离验证Agent-{tenant_a.code}"   # 在租户 A 创建的资源名
+
+data_setup:
+  # 幂等创建租户 A / B(若已存在,后端返回已存在或创建成功,不中断)
+  - id: SETUP-001
+    name: 创建租户 A
+    type: api_call
+    request:
+      method: POST
+      url: "/api/admin/tenants"
+      body:
+        name: "{tenant_a.name}"
+        code: "{tenant_a.code}"
+        adminAccount: "{tenant_a.admin_account}"
+        adminPassword: "{tenant_a.admin_password}"
+    verify:
+      - path: code
+        expect: 0
+
+  - id: SETUP-002
+    name: 创建租户 B
+    type: api_call
+    request:
+      method: POST
+      url: "/api/admin/tenants"
+      body:
+        name: "{tenant_b.name}"
+        code: "{tenant_b.code}"
+        adminAccount: "{tenant_b.admin_account}"
+        adminPassword: "{tenant_b.admin_password}"
+    verify:
+      - path: code
+        expect: 0
+
+steps:
+  # ── 前置: 以平台管理员登录(全局视角) ──
+  - id: NAV-001
+    name: 打开租户管理页
+    actions:
+      - type: navigate
+        url: "{base_url}"
+    verify:
+      - element: 租户管理
+        should_exist: true
+
+  # ── 进入租户 A,在 A 内创建资源 ──
+  - id: FLOW-001
+    name: 进入租户 A
+    actions:
+      - type: click
+        target: "getByText('{tenant_a.name}')"
+      - type: click
+        target: "getByRole('button', { name: '进入租户' })"
+        wait_for: "## 需确认: 进入租户后首页加载完成的选择器"   # 可填资源页可见选择器
+    verify:
+      - element: "🏢 {tenant_a.name}"
+        should_exist: true
+        optional: true      # 顶部切换器格式因系统而异
+
+  - id: FUNC-001
+    name: 在租户 A 创建 Agent 资源
+    actions:
+      - type: navigate
+        url: "{base_url}/agents"
+      - type: click
+        target: "getByRole('button', { name: '新建Agent' })"
+      - type: fill
+        target: "#agent-name-input"
+        value: "{resource_name}"
+      - type: click
+        target: "getByRole('button', { name: '保存' })"
+    verify:
+      - element: "{resource_name}"
+        should_exist: true
+    api_check:
+      - url: /api/agents
+        method: POST
+        expected_code: 200
+
+  # ── 切换到租户 B,验证 A 的数据不可见(隔离核心) ──
+  - id: FLOW-002
+    name: 切换到租户 B
+    actions:
+      - type: click
+        target: "getByRole('button', { name: '🏢 {tenant_a.name}' })"   # 顶部切换器
+      - type: click
+        target: "getByText('{tenant_b.name}')"
+      - type: navigate
+        url: "{base_url}/agents"
+
+  - id: NEG-001
+    name: "租户 B 看不到 A 的 Agent({resource_name} 不应出现)"
+    actions: []
+    verify:
+      - element: "{resource_name}"
+        should_exist: false      # 负断言: 立即检查元素不存在,不等待
+    api_check:
+      - url: /api/agents
+        method: GET
+        expected_code: 200
+        verify:
+          - path: data.list
+            expect_not_contain: "{resource_name}"
+
+  # ── 切回租户 A,资源恢复可见 ──
+  - id: FLOW-003
+    name: 切换回租户 A
+    actions:
+      - type: click
+        target: "getByRole('button', { name: '🏢 {tenant_b.name}' })"
+      - type: click
+        target: "getByText('{tenant_a.name}')"
+      - type: navigate
+        url: "{base_url}/agents"
+
+  - id: POS-001
+    name: "切回 A 后 Agent 恢复可见"
+    actions: []
+    verify:
+      - element: "{resource_name}"
+        should_exist: true
+    api_check:
+      - url: /api/agents
+        method: GET
+        expected_code: 200
+        verify:
+          - path: data.list
+            expect_contain: "{resource_name}"
+
+  # ── 停用租户的进入/删除按钮禁用 (FR-1.5 / FR-2.2) ──
+  - id: FLOW-004
+    name: 停用租户的删除/进入按钮禁用
+    condition: false          # 可选: 需先手动停用某个租户,默认关闭
+    verify:
+      - element: 删除
+        should_be: disabled

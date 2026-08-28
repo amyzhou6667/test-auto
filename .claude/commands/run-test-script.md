@@ -16,6 +16,15 @@ python yaml_generator.py docs/需求文档.md --output scripts/xxx.yaml
 python yaml_generator.py docs/需求文档.md --run
 ```
 
+直接执行脚本时可用参数：
+
+```bash
+python script_runner.py scripts/xxx.yaml --url http://目标地址 \
+  --api-base http://api.目标地址 --retries 1
+#   --api-base  API 基站地址(默认取环境变量 TEST_API_BASE,再回退 YAML params.api_base)
+#   --retries   每条步骤最多尝试次数,默认 1(失败不重试)
+```
+
 ## 脚本格式
 
 ### 数据构造（data_setup）
@@ -136,12 +145,47 @@ request:
 | navigate | browser_navigate | 打开页面 |
 | click | browser_click | 点击元素 |
 | fill / type | browser_type | 输入文字 |
-| assert_text | browser_find | 断言文本存在 |
+| assert_text | browser_find | 断言文本存在(支持 `selector`/`target` 字段、`heading "…"` 风格) |
 | assert_element | browser_evaluate | 断言元素状态 |
 | wait | sleep | 等待 |
 | screenshot | browser_take_screenshot | 截图 |
 | evaluate | browser_evaluate | 执行 JS |
 | api_call | browser_evaluate + fetch | 直接调用后端API |
+
+## verify 断言块（步骤级，由 script_runner 执行）
+
+每个 step 可带 `verify:` 列表，执行顺序为 **actions → verify → api_check**：
+
+| 字段 | 取值 | 说明 |
+|------|------|------|
+| element | 元素名 / CSS 选择器 / `heading "…"` / `getByRole(...)` / `getByText(...)` | 定位目标；纯文本自动回退 button role → text |
+| should_be | disabled / enabled | 控件状态断言，`expect()` 自动等待 5s（替代固定 sleep） |
+| should_exist | true / false | true=可见（自动等待）；false=立即检查不存在（隔离负断言，不等待） |
+| text_contains | 文本子串 | 三层回退：真实元素 → 页面级别名（错误提示/toast）→ body |
+| condition | 表达式 | 不满足则该项跳过（如 `condition: account_verified == true`） |
+| optional | true | 断言失败仅记警告，不判步骤失败 |
+
+```yaml
+verify:
+  - element: 提交结算申请
+    should_be: disabled
+  - element: 错误提示
+    text_contains: "必须为 100 的倍数"
+    optional: true
+```
+
+evaluate 动作的 JS 返回值可用 step verify 的 **path 风格**校验：
+
+```yaml
+actions:
+  - type: evaluate
+    code: |
+      return { hasVerified: document.body.innerText.includes('已认证') };
+verify:
+  - path: hasVerified
+    expect: true
+    condition: account_verified == true
+```
 
 ## 参数替换
 

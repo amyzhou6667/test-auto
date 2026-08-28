@@ -1,0 +1,2 @@
+# 运行框架核心依赖(script_runner.py / execute_test_cases.py 均依赖)
+playwright>=1.44

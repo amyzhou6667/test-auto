@@ -3,6 +3,30 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# 虚拟环境与包安装产物
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ============ 测试/静态检查缓存 ============
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ============ 编辑器/系统文件 ============
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ============ 敏感配置（如存在，不入库） ============
+.env
+.env.local
+
 # ============ Playwright MCP 临时产物 ============
 # 浏览器自动化过程中的页面快照、控制台日志（每次运行都会重新生成）
 .playwright-mcp/
@@ -14,8 +38,15 @@ screenshots/
 # script_runner.py 生成的执行报告（Markdown + _history.csv 历史）
 reports/
 
+# execute_test_cases.py 生成的逐用例结果（results_*.json）与汇总报告（report_*.md）
+results/
+
 # 早期工作流遗留的根目录截图（当前截图统一存放到 screenshots/）
 /*.png
+
+# ============ 一次性探针脚本 ============
+# 排查问题时临时写的调试脚本（探针1/2/3...），用完即弃，不入库
+probe_*.py
 
 # ============ Claude Code 本地个人配置（不共享给团队） ============
 # settings.json 为团队共享配置应提交，settings.local.json 为本地个人配置
