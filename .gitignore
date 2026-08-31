@@ -41,6 +41,12 @@ reports/
 # execute_test_cases.py 生成的逐用例结果（results_*.json）与汇总报告（report_*.md）
 results/
 
+# 通用引擎多项目运行产物（projects/<项目名>/out/）
+projects/*/out/
+
+# 通用化前单体版备份（含迁移前账号明文 ID, 不入库; 原代码可在 git 历史中查看）
+legacy/
+
 # 早期工作流遗留的根目录截图（当前截图统一存放到 screenshots/）
 /*.png
 

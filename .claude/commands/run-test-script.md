@@ -142,15 +142,12 @@ request:
 
 | action type | MCP / 方式 | 说明 |
 |------------|------------|------|
-| navigate | browser_navigate | 打开页面 |
-| click | browser_click | 点击元素 |
-| fill / type | browser_type | 输入文字 |
+| navigate | browser_navigate | 打开页面（可带 wait_until） |
+| click | browser_click | 点击元素（可带 wait_for / expect_url） |
+| fill | browser_type | 输入文字 |
 | assert_text | browser_find | 断言文本存在(支持 `selector`/`target` 字段、`heading "…"` 风格) |
-| assert_element | browser_evaluate | 断言元素状态 |
-| wait | sleep | 等待 |
-| screenshot | browser_take_screenshot | 截图 |
-| evaluate | browser_evaluate | 执行 JS |
-| api_call | browser_evaluate + fetch | 直接调用后端API |
+| wait | sleep | 等待（可带 ms） |
+| evaluate | browser_evaluate | 执行 JS，返回值可用 path 风格校验 |
 
 ## verify 断言块（步骤级，由 script_runner 执行）
 
@@ -167,10 +164,10 @@ request:
 
 ```yaml
 verify:
-  - element: 提交结算申请
+  - element: 提交按钮
     should_be: disabled
   - element: 错误提示
-    text_contains: "必须为 100 的倍数"
+    text_contains: "格式不正确"
     optional: true
 ```
 

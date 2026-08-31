@@ -18,15 +18,13 @@
 | **u-S** | 停用到期账号 | - |
 
 注意：补充账号详情，用于登录
-| 账号 | 用户名 | userId | workbenchId | appId | 租户 |
-| --- | --- | --- | --- | --- | --- |
-| u-A | zh2 | db5b13b1cf6e4da19480261664312942 | aaad5f78847d4d1fbba963de55de4569 | b170b61f55674b61981ca7ff4302b385 | [租户2] |
-| u-B | zh1 | 8658e6cc468b4da9b41fa09babc4dc06 | eed18b9fc63241248195f348982887f6 | 239071aacb1a4648afaf3d5e2ba9e58d | [租户1] |
-| u-X | test | bca388ab0be84e1fad40add82bc6405b | aaad5f78847d4d1fbba963de55de4569/eed18b9fc63241248195f348982887f6 | b170b61f55674b61981ca7ff4302b385/239071aacb1a4648afaf3d5e2ba9e58d | 分别对应[租户2、租户1] |
-| u-N | kong | bca388ab0be84e1fad40add82b65751 | - | - | - |
-| u-F | dj | 815512f162e44e57bdeb787cb12848b6 | aaad5f78847d4d1fbba963de55de4569 | b170b61f55674b61981ca7ff4302b385 | [租户2] |
-| u-S | ty-user | ee21ff69fa754ac199e7de54852fdb6f | a3908936f5854d38893282b382043d06 | 542bab4c2e624146b4686367447147ce | [test1] |
-| u-A | ysbzc | 45c3961f4ae64f1387ab249030581b6c | 3e415f1920554230a4a206b8c850544e | 48ad17072cae432895f810a50afea81c | [test1] |
+
+> **账号数据已迁移**：账号 hex ID（userId/workbenchId/appId）已从本仓库移除，改为经环境变量注入。
+> 真实值见 `projects/corebridge/.env.example` 的占位说明（复制为 `.env` 后填入）。
+> 测试用例文档中的 `u-A/u-B/u-X/u-N/u-F/u-S` 仅保留语义角色（单租户/多租户跨属/空账号/冻结/停用），
+> 结构定义见 `projects/corebridge/project.yaml` 的 `accounts` 节。
+> - u-A: 租户2/zh2；u-B: 租户1/zh1；u-X: 同账号跨租户(test)；u-N: 空租户(kong)；u-F: 冻结(dj)；u-S: 停用(ty-user)
+> - u-X 的 tenants 列表按「第一个 workbenchId 对应第一个 appId」划分
 ---
 
 ## 二、 测试用例清单
@@ -98,7 +96,7 @@
 
 **背景**：u-X 为同一用户绑定多个租户（租户1 + 租户2），本组用例专门验证「**同一账号切换租户时数据按租户隔离**」——这是多租户隔离测试的重中之重。
 
-> 账号参数：u-X userId=`bca388ab0be84e1fad40add82bc6405b`，用户名=`test`；workbenchId/appId 按斜杠划分，**第一个 workbenchId 对应第一个 appId**（租户2：`aaad5f...`/`b170b...`；租户1：`eed18b...`/`239071...`）。
+> 账号参数：u-X userId/用户名、workbenchId/appId 真实值见 `projects/corebridge/.env.example`（占位 `CB_UX_*` 变量）；结构上按斜杠划分，**第一个 workbenchId 对应第一个 appId**（租户2 在前、租户1 在后）。
 
 | 用例ID | 所属模块 | 前置条件 | 操作步骤 | 预期结果 | 优先级 |
 | :--- | :--- | :--- | :--- | :--- | :--- |

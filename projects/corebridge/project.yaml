@@ -1,0 +1,187 @@
+# -*- coding: utf-8 -*-
+# CoreBridge 项目配置（通用引擎 projects/<名称>/project.yaml 的第一个实例）
+#
+# 约定:
+#   - 敏感值(账号 hex ID 等)用 ${ENV_VAR} 引用, 本地 .env 提供, 仓库不存真实账号
+#     (可带默认值: ${VAR:-默认}, 仅用于非敏感字段)
+#   - 所有 paths 相对项目根解析
+#   - modules.order 显式建模模块覆盖顺序(报告行序=首次写入顺序, 内容=最后一次写入)
+#   - 新增项目复制本文件 + hooks/, 改配置即可, 不改 Python
+project:
+  name: corebridge
+  title: CoreBridge 多租户前端工作台
+  description: 多租户前端工作台 UI/隔离/文件下载链路测试
+  adapter: hooks.adapter.CoreBridgeRunner   # Runner 子类(项目专属 DOM 方法)
+
+paths:
+  cases: cases                        # 阶段B YAML 用例目录(暂可空)
+  fixtures: fixtures                  # upload-test.txt / test_sales.xlsx
+  results: out/results
+  screenshots: out/screenshots
+  reports: out/reports                # 汇总报告 + evidence 子目录
+  evidence: out/reports/evidence
+
+browser:
+  headless: false
+  channel: chrome
+  viewport: {width: 1920, height: 1080}
+
+base_url: ${CB_BASE_URL:-http://117.187.178.246:19521/login?redirect=/workbench}
+api_base: ${CB_API_BASE:-http://117.187.178.246:19521}
+
+# 账号表(来自测试用例文档 账号表)。userId/workbenchId/appId 为敏感 hex ID 走 env 注入;
+# username/tenant 为测试断言语义标签, 保留字面量。
+# 结构保留原代码形态: u-X 用 tenants 列表, u-N 无租户, u-F frozen/u-S suspended(标记当前代码不读取, 仅存档)。
+accounts:
+  u-A:
+    userId: ${CB_UA_USER_ID}
+    username: zh2
+    tenant: "租户2"
+    workbenchId: ${CB_UA_WB_ID}
+    appId: ${CB_UA_APP_ID}
+  u-B:
+    userId: ${CB_UB_USER_ID}
+    username: zh1
+    tenant: "租户1"
+    workbenchId: ${CB_UB_WB_ID}
+    appId: ${CB_UB_APP_ID}
+  u-X:
+    userId: ${CB_UX_USER_ID}
+    username: test
+    tenants:                          # 按斜杠划分: 第一个 workbenchId 对应第一个 appId
+      - {name: "租户2", workbenchId: "${CB_UX_T2_WB_ID}", appId: "${CB_UX_T2_APP_ID}"}
+      - {name: "租户1", workbenchId: "${CB_UX_T1_WB_ID}", appId: "${CB_UX_T1_APP_ID}"}
+  u-N:
+    userId: ${CB_UN_USER_ID}
+    username: kong
+    tenant: null
+  u-F:
+    userId: ${CB_UF_USER_ID}
+    username: dj
+    tenant: "租户2"
+    workbenchId: ${CB_UF_WB_ID}
+    appId: ${CB_UF_APP_ID}
+    frozen: true
+  u-S:
+    userId: ${CB_US_USER_ID}
+    username: ty-user
+    tenant: test1
+    workbenchId: ${CB_US_WB_ID}
+    appId: ${CB_US_APP_ID}
+    suspended: true
+
+# 登录弹窗选择器根(其余专属 DOM 逻辑在 hooks/adapter.py)
+selectors:
+  dialog: .te-dlg
+  tenant_select: .te-dlg .el-select
+  tenant_popper: .te-tenant-popper, .el-select-dropdown
+
+api:
+  token_key: cb_login_token           # localStorage token 键(原 1701/1807 两处重复统一)
+  api_prefix: /api/                   # api_count_since 的请求计数前缀
+  sniff_rules:                        # _on_response 响应体嗅探规则表(替换 103-112 硬编码)
+    - {name: api_sessions, match: /api/v1/sessions}
+    - {name: api_upload,   match: /files/upload}
+  upload_response:                    # 上传响应体 data.files[0].fileId/rawUrl(5 处硬编码统一)
+    fileId: data.files[0].fileId
+    rawUrl: data.files[0].rawUrl
+  path_templates:
+    exchange_file: "{base}/mc/api/v1/agentcore/files/{fileId}"   # 原 1708 裸 IP
+    filedl_candidates:                # 原 1812-1818 七条候选
+      - "{base}/mc/api/v1/agentcore/files/{fileId}"
+      - "{base}/mc/api/v1/agentcore/files/download?fileId={fileId}"
+      - "{base}/mc/api/v1/agentcore/files/{fileId}/download"
+      - "{base}/mc/api/v1/agentcore/files/get?fileId={fileId}"
+      - "{base}/mc/api/v1/agentcore/files/raw?fileId={fileId}"
+      - "{base}/ctx/api/v1/files/{fileId}"
+      - "{base}/mc/api/v1/agentcore/files?fileId={fileId}"
+    deeplink_candidates:              # 原 1977-1981 五条
+      - "{base}/workbench?sessionId={sid}"
+      - "{base}/workbench?id={sid}"
+      - "{base}/workbench/session/{sid}"
+      - "{base}/session/{sid}"
+      - "{base}/chat/{sid}"
+  file_keywords: ["梦想", "鸭爪", "江永", "世界和平", "开开心心"]      # 5 份副本统一(1181/1204/1833/1959)
+  file_keywords_uiop08: ["梦想", "鸭爪", "江永", "世界和平", "开开心心", "高中", "江永一中"]  # 1486 专用 7 项
+
+evidence:
+  headers:                            # wb_check_url_access 证据文件中文表头(原 1144-1148)
+    request_url: "请求 URL: {url}"
+    http_status: "HTTP 状态: {status}"
+    content_type: "Content-Type: {content_type}"
+    identity: "请求方身份: 当前登录账号(见报告说明)"
+    body_begin: "=== HTTP 响应体 ==="
+  filenames:                          # 4 个中文证据文件名(原 1202/1660/1681/1958 写死)
+    tc_iso14: "TC-ISO-14_文件直链访问响应.txt"
+    uxfile_d1: "UX-07_租户1取租户2文件URL.txt"
+    uxfile_d2: "UX-07_租户2取租户1文件URL.txt"
+    ux06: "UX-06_同账号跨租户文件直链响应.txt"
+
+modules:
+  # 执行顺序 == 原 ALLOWED(15 项, 2371)。顺序决定报告内容: 后执行模块覆盖先执行模块的同 id 结果。
+  # 跨模块覆盖意图(文档化): TC-UIOP-08/04/05 由 TC-UIOP3 后覆盖; TC-UIOP-09 由 TC-FAV;
+  #   TC-ISO-14 由 TC-UPLOAD; TC-B-04 由 TC-SUPP; TC-UIOP-10/11 由 TC-UIOP2; FILEDL 结果以 FILEDL2 之后为准
+  order: [TC-I, TC-B, TC-N, TC-ISO, TC-UIOP, TC-SUPP, TC-FAV, TC-UPLOAD, TC-RES,
+          TC-UX, TC-UIOP2, TC-UIOP3, FILEDL, FILEDL2, UXFILE]
+
+report:
+  title: "CoreBridge 多租户前端工作台 — 测试报告(汇总)"
+  address: ${CB_BASE_URL:-http://117.187.178.246:19521/login?redirect=/workbench}
+  exec_method: "Playwright 自动化(Chromium) + 网络/API 捕获 + 失败截图"
+  footer: "由 execute_test_cases.py 各模块独立运行合并 | {now}"
+  output_name: "CoreBridge_测试报告汇总_{ts}.md"
+  conclusion_title: "文件隔离"
+  # 原 consolidate_report.py 168 行引用块长文(实测结论, 项目专属)
+  conclusion: >
+     TC-ISO-14 / UX-06 已澄清为非缺陷。 项目真实文件下载链路为置换模式:前端用 fileId 调
+     GET /mc/api/v1/agentcore/files/{fileId} 换取 presigned URL 再下载。实测(FILEDL2):属主
+     u-A 调用→200 正常返回 rawUrl; u-B(跨用户)调用→404「文件不存在」; u-X 同账号跨租户调用→404。
+     应用层文件隔离完全有效。早期观察到的「rawUrl 直链可被持有者访问」是 presigned URL 免密+
+     约1小时有效期的标准 S3 特性,非隔离绕过——获取 URL 的唯一途径是隔离良好的置换接口。
+  # 文档中的用例顺序(TC-ISO-04 / TC-ISO-24 已按需求删除)
+  doc_order: ["TC-I-01","TC-I-02","TC-I-03","TC-I-04","TC-I-05","TC-I-06","TC-I-07",
+              "TC-B-01","TC-B-02","TC-B-03","TC-B-04","TC-B-05","TC-B-06",
+              "TC-N-01","TC-N-02","TC-N-03",
+              "TC-ISO-01","TC-ISO-02","TC-ISO-03","TC-ISO-05","TC-ISO-06","TC-ISO-07","TC-ISO-08","TC-ISO-09","TC-ISO-10","TC-ISO-11","TC-ISO-12","TC-ISO-13","TC-ISO-14","TC-ISO-15","TC-ISO-16","TC-ISO-17","TC-ISO-18","TC-ISO-19","TC-ISO-20","TC-ISO-21","TC-ISO-22","TC-ISO-23",
+              "TC-UIOP-01","TC-UIOP-02","TC-UIOP-03","TC-UIOP-04","TC-UIOP-05","TC-UIOP-06","TC-UIOP-07","TC-UIOP-08","TC-UIOP-09","TC-UIOP-10","TC-UIOP-11","TC-UIOP-12","TC-UIOP-13","TC-UIOP-14","TC-UIOP-15","TC-UIOP-16","TC-UIOP-17"]
+  bad_runs: [results_20260826_115605.json]   # TC-UIOP-04 误报失败, 该次运行整体异常
+  overrides:                                 # 后处理覆盖(TC-UIOP-08 依赖 AI 引用不稳定)
+    TC-UIOP-08:
+      status: 无法验证
+      actual: "上传成功=True, 但 AI 回复/引用文件内容在自动化下不稳定(多次运行回复为空或未引用文件关键词)"
+      detail: "上传功能正常(TC-ISO-13已通过); AI 是否引用文件内容需人工确认, 或属 AI 行为随机"
+  exclude: [TC-ISO-04, TC-ISO-24]            # 按需求删除的用例
+
+consolidate:
+  # 基础模块: 各模块最新一次「全量运行」的权威结果(原 BASE, 21-27)
+  base:
+    - {module: TC-I,    first_id: TC-I-01}
+    - {module: TC-B,    first_id: TC-B-01}
+    - {module: TC-N,    first_id: TC-N-01}
+    - {module: TC-ISO,  first_id: TC-ISO-01}
+    - {module: TC-UIOP, first_id: TC-UIOP-01}
+  # 补充模块: 锚定用例 id 识别补跑文件, 覆盖同 id 基础结果(列表顺序即覆盖优先级, 后者覆盖前者)
+  #   注意: FILEDL2 在前、FILEDL 在后(原 39-40 行约束)—— find_supp 精确相等 + consumed 独占,
+  #   保证 FILEDL 不会抢到 FILEDL2 的运行文件
+  supplements:
+    - {module: TC-SUPP,   anchors: [TC-B-04]}
+    - {module: TC-FAV,    anchors: [TC-UIOP-09]}
+    - {module: TC-UPLOAD, anchors: [TC-ISO-14]}
+    - {module: TC-RES,    anchors: [TC-ISO-23]}
+    - {module: TC-UX,     anchors: [UX-01]}
+    - {module: TC-UIOP2,  anchors: [TC-UIOP-11]}
+    - {module: TC-UIOP3,  anchors: [TC-UIOP-05]}
+    - {module: FILEDL2,   anchors: [FILEDL2]}
+    - {module: FILEDL,    anchors: [FILEDL]}
+    - {module: UXFILE,    anchors: [UX-07]}
+
+# 状态枚举/图标/统计口径(原 248/349 两份重复图标表合一; 待补充补进图标但不入统计)
+status:
+  enums: [通过, 失败, 无法验证, 未执行, 待补充]
+  icons:
+    通过: ✅
+    失败: ❌
+    无法验证: ⚠️
+    未执行: ⏭️
+    待补充: ⏳
+  stats: [通过, 失败, 无法验证]

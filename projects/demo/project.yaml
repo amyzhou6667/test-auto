@@ -1,0 +1,45 @@
+# -*- coding: utf-8 -*-
+# demo 项目：最小假项目，验证通用引擎零 CoreBridge 假设可接入
+# 无浏览器依赖，模块直接 set_result 假数据出报告。
+project:
+  name: demo
+  title: Demo 最小假项目
+  description: 验证引擎通用接入的最小示例（不碰浏览器）
+
+paths:
+  cases: cases
+  fixtures: fixtures
+  results: out/results
+  screenshots: out/screenshots
+  reports: out/reports
+  evidence: out/reports/evidence
+
+browser:
+  headless: true
+
+base_url: ${DEMO_BASE_URL:-http://demo.example.com}
+
+modules:
+  order: [SMOKE]
+
+report:
+  title: "Demo 最小假项目 — 测试报告"
+  address: ${DEMO_BASE_URL:-http://demo.example.com}
+  exec_method: "假数据(不碰浏览器)"
+  footer: "由 run_project.py 自动生成 | {now}"
+  output_name: "Demo_测试报告_{ts}.md"
+  doc_order: [SMOKE-01, SMOKE-02]
+
+consolidate:
+  base:
+    - {module: SMOKE, first_id: SMOKE-01}
+
+status:
+  enums: [通过, 失败, 无法验证, 未执行, 待补充]
+  icons:
+    通过: ✅
+    失败: ❌
+    无法验证: ⚠️
+    未执行: ⏭️
+    待补充: ⏳
+  stats: [通过, 失败, 无法验证]

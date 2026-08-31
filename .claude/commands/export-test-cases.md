@@ -1,10 +1,10 @@
 ---
-description: 从 docs/ 需求文档自动生成 YAML 测试脚本（scripts/*.yaml），识别输入框校验规则、API、MUST/NOT 约束。用法: /export-test-cases docs/需求文档.md
+description: 从需求文档自动生成 YAML 测试脚本（scripts/*.yaml），识别输入框校验规则、API、MUST/NOT 约束。用法: /export-test-cases <需求文档.md>
 ---
 
-# /export-test-cases — 生成测试脚本
+# /export-test-cases — 生成测试脚本（管线1）
 
-从 `docs/` 下的需求文档自动生成可直接执行的 YAML 测试脚本，输出到 `scripts/` 目录。
+从需求文档自动生成可直接执行的 YAML 测试脚本，输出到 `scripts/` 目录。
 
 ## 用法
 
@@ -19,6 +19,9 @@ python yaml_generator.py docs/需求文档.md --output scripts/xxx.yaml
 python yaml_generator.py docs/需求文档.md --run
 ```
 
+> 管线1（需求驱动）已通用：`yaml_generator.py` + `script_runner.py`，URL/api_base 全参数化。
+> 需求文档放 `docs/`（或项目目录），夹具类文件（xlsx/txt 等）放对应 `fixtures/`。
+
 ## 自动识别内容
 
 解析需求文档后自动提取：
@@ -26,7 +29,7 @@ python yaml_generator.py docs/需求文档.md --run
 | 内容 | 说明 |
 |------|------|
 | 需求编号/标题 | `REQ-xxx` + 标题 |
-| 输入框及校验规则 | 姓名长度、身份证位数、金额倍数等，自动生成边界值/空值/非法值用例 |
+| 输入框及校验规则 | 长度/位数/倍数/范围等，自动生成边界值/空值/非法值用例 |
 | 按钮与操作 | 提交/保存/确认等操作流程 |
 | API 端点 | `/api/...` 接口列表，生成 data_setup 与 api_check |
 | MUST/NOT 约束 | 必须/不应 条件，生成负面用例 |

@@ -1,92 +1,56 @@
 ---
-description: 测试用例驱动执行。需求文档 → 生成测试用例清单 → 逐条浏览器执行 → 逐条记录结果 → 汇总报告。
+description: 测试用例驱动执行（管线2）。从项目配置读取模块，逐条浏览器执行，逐条记录结果，汇总报告。用法: /execute-test-cases
 ---
 
-# /execute-test-cases — 测试用例驱动执行
+# /execute-test-cases — 测试用例驱动执行（管线2）
 
 ## 流程
 
 ```
-需求文档 → 生成测试用例清单 → 逐条执行 → 逐条记录结果 → 汇总报告
+项目配置(projects/<名称>/project.yaml) → hooks 模块(15 个 run_TC_*) → 逐模块浏览器执行 → results JSON + 单次报告 → consolidate 汇总报告
 ```
 
-## 第1步：生成测试用例清单
+## 使用
 
-读取 `docs/` 下的需求文档，生成编号测试用例。每条用例包含：
-
-```
-TC-001 [功能/边界/异常/API] 标题
-  前置条件: xxx
-  测试步骤: 1. xxx  2. xxx
-  预期结果: xxx
-  实际结果: (待执行)
-  状态: (待执行)
-```
-
-### 测试用例分类规则
-
-| 类型 | 说明 | 覆盖率目标 |
-|------|------|-----------|
-| TC-FUNC | 功能验证 | 需求中所有功能点 100% |
-| TC-BOUNDARY | 边界值 | 每个输入框的最小/最大/临界值 |
-| TC-ERROR | 异常输入 | 格式错误、超长、空值、特殊字符 |
-| TC-API | 接口验证 | 每个操作对应的 API 请求/响应 |
-| TC-FLOW | 流程验证 | 主路径 + 分支路径 |
-| TC-NEGATIVE | 负面约束 | NOT 条件、禁止行为 |
-
-### 边界值生成规则
-
-对每个输入框自动生成：
+框架已通用化：`python run_project.py --project <项目名> [模块...]`。
 
 ```
-合法最小值      (如: 1000 → 通过)
-低于最小值      (如: 999  → 拒绝)
-合法最大值      (如: 11130 → 通过)
-超过最大值      (如: 11131 → 拒绝)
-格式正确       (如: 1000 → 通过)
-格式错误       (如: 1050 → 拒绝，非100倍数)
-特殊字符       (如: <script> → 拒绝)
-空值           (如: "" → 拒绝)
+# 列出项目已注册模块（不执行）
+python run_project.py --project corebridge --list
+
+# 执行全部模块（--project 缺省 corebridge）
+python run_project.py --project corebridge
+
+# 只执行指定模块（大小写不敏感）
+python run_project.py --project corebridge TC-I TC-UIOP3
+
+# 汇总合并报告
+python run_consolidate.py --project corebridge
 ```
 
-## 第2步：逐条执行
+旧入口仍可用（等价于 --project corebridge）：`python execute_test_cases.py TC-I`
 
-对每条测试用例：
+## 模块与用例编号（CoreBridge 实际实现，与 TC-001/TC-FUNC 分类无关）
 
-```
-用例: TC-001 [功能] xxx
-  → browser_navigate / browser_click / browser_type 执行步骤
-  → browser_network_requests 检查 API
-  → browser_evaluate 验证 UI 状态
-  → 记录: 通过 ✅ / 失败 ❌ / 跳过 ⏭️
-```
+| 模块 | 用例范围 | 说明 |
+|------|---------|------|
+| TC-I | TC-I-01~07 | 登录弹窗与账号绑定 |
+| TC-B | TC-B-01~06 | 登录回填/信息完整性/退出 |
+| TC-N | TC-N-01~03 | 数据隔离与权限 |
+| TC-ISO | TC-ISO-01~24 | 数据隔离（会话/收藏/文件/资源） |
+| TC-UIOP | TC-UIOP-01~17 | 统一 UI 操作流 |
+| TC-SUPP / TC-FAV / TC-UPLOAD / TC-RES / TC-UX / TC-UIOP2 / TC-UIOP3 / FILEDL / FILEDL2 / UXFILE | 补跑与专项 | 见 project.yaml modules.order |
 
-## 第3步：输出报告
+**执行顺序即覆盖顺序**：`modules.order` 决定报告内容（后执行模块覆盖同 id 的先执行结果），
+如 TC-UIOP-08/04/05 由 TC-UIOP3 后覆盖真实结果。跨模块覆盖意图在 project.yaml 有注释文档化。
 
-```
-================================================================
-  测试报告 — REQ-xxx
-================================================================
-  总计: N 条
-  通过: N    失败: N    跳过: N
-================================================================
+## 账号与环境变量
 
-TC-001 [功能] xxxxxxx  ✅
-TC-002 [边界] xxxxxxx  ✅
-TC-003 [异常] xxxxxxx  ❌ (预期: xxx, 实际: xxx)
-TC-004 [API]  xxxxxxx  ✅
-...
+- 账号 hex ID 不存仓库：复制 `projects/corebridge/.env.example` 为 `.env` 填入真实值
+- 缺失变量启动时会一次性报错列出，不会静默留空
+- 依赖浏览器：`playwright install chromium`（headless 由 project.yaml browser 控制）
 
-================================================================
-  失败详情
-================================================================
-TC-003: 预期提示"xxx"，实际显示"yyy"
-...
-```
+## 输出
 
-## 执行须知
-
-- 浏览器由用户手动登录
-- 每条用例独立截图
-- API 通过 browser_network_requests 捕获
-- 测试数据由用户提前准备
+- 单次结果：`projects/<项目名>/out/results/results_{时间戳}.json` + `report_{时间戳}.md`
+- 汇总报告：`projects/<项目名>/out/reports/<项目名>_测试报告汇总_*.md`（consolidate 按 BASE/SUPPLEMENTS/DOC_ORDER 自动合并多模块权威结果）
