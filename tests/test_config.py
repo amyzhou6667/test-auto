@@ -87,8 +87,17 @@ def test_load_project_corebridge_all_env(monkeypatch):
     assert "待补充" not in cfg.status_stats()
 
 
-def test_load_project_corebridge_missing_env_raises():
-    """不设账号 env → ConfigError 列出缺失变量，不静默。"""
+def test_load_project_corebridge_missing_env_raises(monkeypatch):
+    """不设账号 env → ConfigError 列出缺失变量，不静默。
+
+    与本地 .env 存在性无关: 清空 CB_* 环境变量 + 隔离 load_dotenv，
+    保证在任何机器（有/无 .env）上都走到「缺失变量」分支。
+    """
+    # 本机 .env 可能已填入真实值 → mock 掉 dotenv 加载, 让缺失判定只依赖环境变量
+    monkeypatch.setattr("framework.config.load_dotenv", lambda path: {})
+    for key in list(os.environ):
+        if key.startswith("CB_"):
+            monkeypatch.delenv(key, raising=False)
     with pytest.raises(ConfigError) as ei:
         load_project("corebridge", REPO_ROOT)
     msg = str(ei.value)

@@ -36,6 +36,12 @@ def load_hooks(cfg, framework_imports=None):
 
     registry.clear()  # 同一进程切换项目时清掉残留注册
 
+    # 同时清掉 sys.modules 中缓存的 hooks 包及子模块：否则二次 load_hooks 时
+    # importlib.import_module 直接返回缓存模块，@module 装饰器不会重新执行，
+    # 而 registry 已 clear → 注册丢失 → 模块列表为空（同一进程切换/重复加载必现）
+    for key in [k for k in sys.modules if k == "hooks" or k.startswith("hooks.")]:
+        del sys.modules[key]
+
     hooks_dir = cfg.root / "hooks"
     if not hooks_dir.exists():
         return {}, None
