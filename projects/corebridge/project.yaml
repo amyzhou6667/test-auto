@@ -31,7 +31,8 @@ api_base: ${CB_API_BASE:-http://117.187.178.246:19521}
 
 # 账号表(来自测试用例文档 账号表)。userId/workbenchId/appId 为敏感 hex ID 走 env 注入;
 # username/tenant 为测试断言语义标签, 保留字面量。
-# 结构保留原代码形态: u-X 用 tenants 列表, u-N 无租户, u-F frozen/u-S suspended(标记当前代码不读取, 仅存档)。
+# 结构: u-X 用 tenants 列表(跨租户), u-N 无租户; u-F(frozen)由 TC-SUPP 的 TC-B-04/TC-N-03
+#   用例使用, u-S(suspended)由 TC-UIOP-17 用例使用 —— 两者都实际读取, 不可删除。
 accounts:
   u-A:
     userId: ${CB_UA_USER_ID}
