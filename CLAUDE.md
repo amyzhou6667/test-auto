@@ -20,7 +20,7 @@
 **默认工作方式**：
 - 项目相关配置 → 读 `projects/<名称>/project.yaml`（单一事实源）
 - 模块/用例信息 → 跑 `--list`，不要读 hooks 源码
-- 验证改动 → 跑 `python -m pytest tests/ -q`（58 个单测，纯函数无浏览器），不要逐个读测试文件
+- 验证改动 → 跑 `python -m pytest tests/ -q`（72 个单测，纯函数无浏览器），不要逐个读测试文件
 - CoreBridge 专属细节 → 查记忆文件 `corebridge-testing-notes.md` / `corebridge-test-url.md`（紧凑）
 
 ## 快速导航
@@ -34,7 +34,7 @@ projects/
   demo/          最小假项目（零浏览器依赖，验证引擎通用性）
 execute_test_cases.py / consolidate_report.py   兼容壳(deprecated, 转调 run_project/run_consolidate)
 yaml_generator.py / script_runner.py  管线1（已通用, 勿改纯函数签名——会打破 15 个单测）
-tests/           58 个单测（29 旧 + 29 新），不依赖浏览器
+tests/           72 个单测（29 旧 + 43 新），不依赖浏览器
 ```
 
 ## 常用命令
@@ -43,6 +43,7 @@ tests/           58 个单测（29 旧 + 29 新），不依赖浏览器
 python -m pytest tests/ -q                          # 单测（唯一推荐的验证方式）
 python run_project.py --project corebridge --list   # 看模块清单（省 token 首选）
 python run_project.py --project corebridge TC-I     # 跑单模块（真实浏览器, 需 .env 有账号）
+python run_project.py --project corebridge --smoke  # 只跑冒烟集 (modules.smoke)
 python run_consolidate.py --project corebridge      # 汇总报告
 python run_project.py --project demo                # demo 假项目（不碰浏览器, 验证引擎）
 ```

@@ -59,6 +59,7 @@ def test_load_project_demo(tmp_path, monkeypatch):
     assert cfg.project["name"] == "demo"
     assert cfg.base_url == "http://demo.example.com"
     assert cfg.module_order() == ["SMOKE"]
+    assert cfg.smoke_modules() == ["SMOKE"]
     assert cfg.resolve_path("results") == cfg.root / "out" / "results"
 
 
@@ -81,6 +82,7 @@ def test_load_project_corebridge_all_env(monkeypatch):
     assert cfg.base_url.startswith("http://117.187.178.246:19521")
     assert cfg.account("u-X")["tenants"][0]["name"] == "租户2"
     assert len(cfg.module_order()) == 15
+    assert cfg.smoke_modules() == ["TC-I", "TC-B", "TC-ISO"]
     assert len(cfg.report["doc_order"]) == 55
     assert len(cfg.consolidate["supplements"]) == 10
     assert cfg.status_icons()["待补充"] == "⏳"

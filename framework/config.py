@@ -147,6 +147,10 @@ class ProjectConfig:
     def module_order(self):
         return list(self.modules.get("order") or [])
 
+    def smoke_modules(self):
+        """冒烟集（modules.smoke），未配置则空列表。"""
+        return list(self.modules.get("smoke") or [])
+
     def status_icons(self):
         return dict(self.status.get("icons") or {})
 

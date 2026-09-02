@@ -11,19 +11,42 @@ from datetime import datetime
 from pathlib import Path
 
 
-def save_report(runner, cfg):
+def _unique_path(path):
+    """目标已存在则追加 _2/_3… 后缀，避免同秒运行互相覆盖。
+
+    后缀在按名排序中仍排在原文件之后（'.' < '_'），不破坏"字典序=时间序"。
+    """
+    if not path.exists():
+        return path
+    for i in range(2, 1000):
+        cand = path.with_name(f"{path.stem}_{i}{path.suffix}")
+        if not cand.exists():
+            return cand
+    return path
+
+
+def save_report(runner, cfg, modules=None):
     """把 runner.results 落盘为 results_{ts}.json + report_{ts}.md。
 
     应在调度层 try/finally 内调用（修 bug6：异常也保报告）。
+    modules: 本次执行的模块名列表，写入 results JSON 的 meta（供 consolidate 精确匹配）。
     """
     result_dir = cfg.resolve_path("results")
     result_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     data = [r.to_dict() for r in runner.results.values()]
-    jpath = result_dir / f"results_{ts}.json"
-    jpath.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = {
+        "meta": {
+            "modules": list(modules) if modules else [],
+            "project": cfg.project.get("name", ""),
+            "ts": ts,
+        },
+        "results": data,
+    }
+    jpath = _unique_path(result_dir / f"results_{ts}.json")
+    jpath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     md = build_markdown(data, cfg)
-    mpath = result_dir / f"report_{ts}.md"
+    mpath = _unique_path(result_dir / f"report_{ts}.md")
     mpath.write_text(md, encoding="utf-8")
     print(f"\n  📄 报告已保存: {mpath}")
     print(f"  📄 明细已保存: {jpath}")

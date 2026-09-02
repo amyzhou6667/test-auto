@@ -20,9 +20,23 @@ python yaml_generator.py docs/需求文档.md --run
 
 ```bash
 python script_runner.py scripts/xxx.yaml --url http://目标地址 \
-  --api-base http://api.目标地址 --retries 1
+  --api-base http://api.目标地址 --retries 1 \
+  --project corebridge
 #   --api-base  API 基站地址(默认取环境变量 TEST_API_BASE,再回退 YAML params.api_base)
 #   --retries   每条步骤最多尝试次数,默认 1(失败不重试)
+#   --project   产物归属项目(projects/<名>/), 截图/报告/history 写入该项目 out/ 下;
+#               缺省读脚本 metadata.project 兜底; 都没有则用仓库根 reports/ 旧路径
+```
+
+脚本也可在 `metadata` 里声明归属（CLI `--project` 优先于它）：
+
+```yaml
+metadata:
+  id: SCRIPT-xxx
+  name: 脚本名称
+  req: REQ-xxx
+  project: corebridge   # 可选: 输出归属项目, 不传 --project 时生效
+  version: 1.0
 ```
 
 ## 脚本格式

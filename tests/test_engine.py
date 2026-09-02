@@ -79,14 +79,28 @@ def test_save_report_writes_json_and_md(tmp_path):
     runner = Runner(cfg=cfg)
     runner.set_result("TC-1", "用例", "通过", "实际", "说明")
     runner.set_result("TC-2", "用例2", "待补充", "", "占位")  # 待补充不入统计口径
-    jpath, mpath = save_report(runner, cfg)
+    jpath, mpath = save_report(runner, cfg, modules=["SMOKE"])
     assert jpath.exists() and mpath.exists()
     data = json.loads(jpath.read_text(encoding="utf-8"))
-    assert len(data) == 2
+    # 新格式 {meta, results}: modules 元数据写入供 consolidate 精确匹配
+    assert set(data) == {"meta", "results"}
+    assert data["meta"]["modules"] == ["SMOKE"]
+    assert len(data["results"]) == 2
     md = mpath.read_text(encoding="utf-8")
     assert "**总计:** 2" in md            # 待补充计入总计
     assert "**通过:** 1" in md            # 统计口径只有通过/失败/无法验证
     assert "**无法验证:** 0" in md
+
+
+def test_unique_path_dedupes_same_second(tmp_path):
+    from framework.report import _unique_path
+    base = tmp_path / "results_20260101_000000.json"
+    base.write_text("{}", encoding="utf-8")
+    p2 = _unique_path(base)
+    assert p2.name == "results_20260101_000000_2.json"
+    p2.write_text("{}", encoding="utf-8")
+    p3 = _unique_path(base)
+    assert p3.name == "results_20260101_000000_3.json"
 
 
 # ─────────── screenshot 防同秒覆盖 ───────────

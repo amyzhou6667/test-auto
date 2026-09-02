@@ -40,7 +40,7 @@ async def _run(cfg, modules, mods, runner_cls):
         # 即便启动失败也尝试保存空报告（保留 finally 语义）
         try:
             await runner.close()
-            save_report(runner, cfg)
+            save_report(runner, cfg, modules=modules)
         except Exception:
             pass
         return
@@ -58,12 +58,15 @@ async def _run(cfg, modules, mods, runner_cls):
                 print(f"  [ERROR] 模块 {mod} 异常: {e!r}")
     finally:
         await runner.close()
-        save_report(runner, cfg)  # 异常也保报告（修 bug6）
+        save_report(runner, cfg, modules=modules)  # 异常也保报告（修 bug6）
 
 
 def main(argv=None):
     win32_utf8()
-    args = cli.add_project_arg().parse_args(argv)
+    parser = cli.add_project_arg()
+    parser.add_argument("--smoke", action="store_true",
+                        help="执行项目配置 modules.smoke 冒烟集（默认取 modules.order 全部）")
+    args = parser.parse_args(argv)
 
     try:
         cfg = load_project(args.project, ROOT, strict=not args.list)
@@ -81,9 +84,16 @@ def main(argv=None):
             spec = mods.get(name)
             state = f"已注册({len(spec.cases)} 用例)" if spec else "[未实现]"
             print(f"  - {name:<10} {state}")
+        smoke = cfg.smoke_modules()
+        print(f"冒烟集 (modules.smoke{', ' + str(len(smoke)) + ' 个' if smoke else ', 未配置'}):")
+        if smoke:
+            for name in smoke:
+                spec = mods.get(name.upper())
+                state = f"已注册({len(spec.cases)} 用例)" if spec else "[未实现]"
+                print(f"  - {name:<10} {state}")
         return
 
-    modules, _ = cli.resolve_modules(args, order)
+    modules, _ = cli.resolve_modules(args, order, smoke=cfg.smoke_modules())
     if not modules:
         print("[错误] 没有可执行的模块 (用 --list 查看, 或 --project <名称> 指定项目)")
         sys.exit(1)

@@ -21,6 +21,7 @@ base_url: ${DEMO_BASE_URL:-http://demo.example.com}
 
 modules:
   order: [SMOKE]
+  smoke: [SMOKE]
 
 report:
   title: "Demo 最小假项目 — 测试报告"

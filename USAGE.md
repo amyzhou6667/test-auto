@@ -12,7 +12,8 @@
 
 剩下全部自动完成。
 
-> 管线1（需求驱动）已通用，可复测不同项目。管线2（用例驱动）按项目配置执行：
+> 管线1（需求驱动）已通用，可复测不同项目；产物默认在仓库根 reports/，传 `--project <名称>`
+> 可将截图/报告/history 归入该项目 `out/`（与管线2产物同目录）。管线2（用例驱动）按项目配置执行：
 > `python run_project.py --project <名称> [模块...]`，配置在 `projects/<名称>/project.yaml`。
 
 ## 测试覆盖范围
@@ -38,10 +39,10 @@
 
 ```
 ├── framework/                     # 通用引擎包（无项目假设）
-├── run_project.py                 # 管线2入口: --project <名称> [模块...] / --list / --all
+├── run_project.py                 # 管线2入口: --project <名称> [模块...] / --list / --all / --smoke
 ├── run_consolidate.py             # 管线2汇总: --project <名称> [results_dir]
 ├── yaml_generator.py              # 管线1: 需求文档 → YAML 脚本
-├── script_runner.py               # 管线1: 执行 YAML 脚本
+├── script_runner.py               # 管线1: 执行 YAML 脚本 (--project 可选, 产物归入项目 out/)
 ├── projects/<名称>/               # 项目目录
 │   ├── project.yaml               # 项目配置（账号/选择器/API/模块顺序/报告）
 │   ├── hooks/                     # 项目适配层（Runner 子类 + @module 用例模块）

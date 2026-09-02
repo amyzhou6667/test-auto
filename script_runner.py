@@ -35,6 +35,8 @@ except ImportError:
 
 from playwright.async_api import async_playwright, expect
 
+from framework.config import load_project
+
 LOGIN_TIMEOUT = 180
 LOCATOR_TIMEOUT = 5000
 
@@ -258,11 +260,12 @@ def find_api_match(api_responses, url_pattern):
 
 
 class ScriptRunner:
-    def __init__(self, script_path: str, base_url: str = None, api_base: str = None, retries: int = 1):
+    def __init__(self, script_path: str, base_url: str = None, api_base: str = None, retries: int = 1, project: str = None):
         self.script_path = Path(script_path)
         self.base_url = base_url
         self.api_base_cli = api_base
         self.retries = max(1, int(retries))
+        self.project = project or None
         self.script = None
         self.params = {}
         self.page = None
@@ -276,7 +279,9 @@ class ScriptRunner:
         self.api_base = None
         self._screenshotted_steps = set()
         self._last_evaluate_result = None
+        # 产物目录：默认仓库根旧路径；指定 --project 时在 load_script 内按项目配置覆盖
         self.screenshot_dir = Path(__file__).parent / "screenshots"
+        self.report_dir = Path(__file__).parent / "reports"
 
     def load_script(self):
         with open(self.script_path, encoding="utf-8") as f:
@@ -298,6 +303,16 @@ class ScriptRunner:
             self.params["api_base"] = api_base
         else:
             print("  [WARN] 未配置 api_base(可用 --api-base 或环境变量 TEST_API_BASE 指定)")
+        # 归属项目：CLI --project 优先，脚本 metadata.project 兜底；都没有则保持仓库根旧路径
+        project = self.project or (self.script.get("metadata", {}) or {}).get("project")
+        if project:
+            try:
+                cfg = load_project(str(project), Path(__file__).parent, strict=False)
+                self.screenshot_dir = cfg.resolve_path("screenshots")
+                self.report_dir = cfg.resolve_path("reports")
+                print(f"  [project] 输出归属项目「{cfg.project.get('name')}」: {self.report_dir}")
+            except Exception as e:
+                print(f"  [WARN] 项目归属解析失败(回退仓库根产物目录): {e}")
         meta = self.script.get("metadata", {})
         print(f"\n{'='*60}")
         print(f"  脚本: {meta.get('name', self.script_path.name)}")
@@ -870,7 +885,7 @@ class ScriptRunner:
             print(f"  {icon.get(r['status'], '❓')} {r['id']} {r['name']}")
 
         # 保存结构化报告
-        report_dir = Path(__file__).parent / "reports"
+        report_dir = self.report_dir
         report_dir.mkdir(parents=True, exist_ok=True)
         report_path = report_dir / f"{timestamp}_{req}.md"
 
@@ -893,11 +908,12 @@ class ScriptRunner:
 
         lines.extend(["", "---", f"*由 script_runner.py 自动生成 | {now}*", ""])
 
-        # 追加失败截图
+        # 追加失败截图（相对报告目录的路径, 便于报告整体移动/分享）
         if self.failed_screenshots:
             lines.extend(["", "## 失败截图", ""])
             for ss in self.failed_screenshots:
-                lines.append(f"![]({ss})")
+                rel = os.path.relpath(ss, report_dir)
+                lines.append(f"![]({rel})")
             lines.append("")
 
         report_path.write_text("\n".join(lines), encoding="utf-8")
@@ -938,9 +954,10 @@ async def main():
     parser.add_argument("--url", help="目标地址，覆盖 params.base_url")
     parser.add_argument("--api-base", help="API 基站地址，覆盖 params.api_base(默认取环境变量 TEST_API_BASE)")
     parser.add_argument("--retries", type=int, default=1, help="每条步骤最多尝试次数(默认 1,即失败不重试)")
+    parser.add_argument("--project", help="输出归属项目名(projects/<名>/), 截图/报告/history 写入该项目 out/ 下; 缺省读脚本 metadata.project, 都没有则用仓库根 reports/")
     args = parser.parse_args()
 
-    runner = ScriptRunner(args.script, args.url, args.api_base, args.retries)
+    runner = ScriptRunner(args.script, args.url, args.api_base, args.retries, project=args.project)
     runner.load_script()
 
     try:

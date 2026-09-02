@@ -72,6 +72,42 @@ def test_find_supp_consumed_file_not_reused(tmp_path):
     assert path is None
 
 
+# ─────────── 新格式 {meta, results}: 按 meta.modules 精确匹配 ───────────
+def test_find_base_meta_modules_match(tmp_path):
+    """新格式按 meta.modules 精确匹配——首条 id 不是该模块前缀(如 --smoke 混合运行)也能命中。"""
+    f = tmp_path / "results_20260103_000000.json"
+    _write_json(f, {
+        "meta": {"modules": ["TC-I", "TC-B", "TC-ISO"], "project": "t", "ts": "x"},
+        "results": [
+            {"id": "TC-I-01", "name": "", "status": "通过", "actual": "",
+             "detail": "", "evidence": ""},   # 首条是 TC-I, 不是 TC-ISO 前缀
+            {"id": "TC-ISO-01", "name": "", "status": "通过", "actual": "",
+             "detail": "", "evidence": ""},
+        ],
+    })
+    files = result_files(tmp_path)
+    # 传 module → 命中（不再依赖 data[0].id 前缀，子模块/混合运行不漏判）
+    path, data = find_base("TC-ISO-01", files, set(), module="TC-ISO")
+    assert path == f
+    assert data[0]["id"] == "TC-I-01"
+    # 不传 module 的旧逻辑（兼容路径）：首条 id 前缀不匹配 → 漏判，这正是 meta 修复点
+    path2, _ = find_base("TC-ISO-01", files, set())
+    assert path2 is None
+
+
+def test_find_base_meta_modules_mismatch_skips(tmp_path):
+    """meta.modules 不含目标模块 → 跳过（不会因首条 id 前缀误判为命中）。"""
+    f = tmp_path / "results_20260103_000000.json"
+    _write_json(f, {
+        "meta": {"modules": ["TC-ISO"], "project": "t", "ts": "x"},
+        "results": [{"id": "TC-ISO-01", "name": "", "status": "通过", "actual": "",
+                     "detail": "", "evidence": ""}],
+    })
+    files = result_files(tmp_path)
+    path, data = find_base("TC-I-01", files, set(), module="TC-I")
+    assert path is None
+
+
 # ─────────── render_report 全流程 ───────────
 def _make_render_files(tmp_path):
     """构造: 全量运行(TC-I-01 开头) + 补跑(TC-B-04 锚定) + FILEDL 单独文件。"""

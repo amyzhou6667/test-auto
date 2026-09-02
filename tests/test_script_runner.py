@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """script_runner 纯函数单测(不依赖浏览器)"""
+from pathlib import Path
+
 import script_runner as sr
 
 
@@ -111,3 +113,45 @@ def test_resolve_template_nested():
     assert sr.resolve_template("{base_url}/p", params) == "http://x/p"
     assert sr.resolve_template("{test_account.phone}", params) == "13616510594"
     assert sr.resolve_template("{account_verified}", params) == "True"
+
+
+# ─────────── --project 产物目录路由 ───────────
+def _script_yaml(path, project=None):
+    meta = "  id: SCRIPT-X\n  name: x\n  req: REQ-X\n"
+    if project:
+        meta += f"  project: {project}\n"
+    path.write_text(
+        f"metadata:\n{meta}version: 1.0\n"
+        "params:\n  base_url: http://demo.example.com\n"
+        "steps:\n  - id: S-1\n    name: x\n    actions: []\n",
+        encoding="utf-8")
+
+
+def test_script_runner_project_metadata_routes_dirs(tmp_path):
+    """metadata.project 兜底: 报告/截图/history 指向 projects/<名>/out/ 下。"""
+    y = tmp_path / "s.yaml"
+    _script_yaml(y, project="demo")
+    r = sr.ScriptRunner(str(y))
+    r.load_script()
+    assert r.report_dir == Path(__file__).resolve().parents[1] / "projects" / "demo" / "out" / "reports"
+    assert r.screenshot_dir == Path(__file__).resolve().parents[1] / "projects" / "demo" / "out" / "screenshots"
+
+
+def test_script_runner_cli_project_overrides_metadata(tmp_path):
+    """CLI --project 优先于 metadata.project。"""
+    y = tmp_path / "s.yaml"
+    _script_yaml(y, project="demo")  # 元数据写 demo, CLI 显式给 corebridge
+    r = sr.ScriptRunner(str(y), project="corebridge")
+    r.load_script()
+    assert r.report_dir.name == "reports"
+    assert "corebridge" in str(r.report_dir)
+
+
+def test_script_runner_no_project_keeps_legacy_dirs(tmp_path):
+    """不传 --project 且脚本无 metadata.project → 保持仓库根旧路径。"""
+    y = tmp_path / "s.yaml"
+    _script_yaml(y)  # 无 project
+    r = sr.ScriptRunner(str(y))
+    r.load_script()
+    assert r.report_dir == Path(__file__).resolve().parents[1] / "reports"
+    assert r.screenshot_dir == Path(__file__).resolve().parents[1] / "screenshots"

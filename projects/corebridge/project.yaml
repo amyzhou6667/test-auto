@@ -124,6 +124,8 @@ modules:
   #   TC-ISO-14 由 TC-UPLOAD; TC-B-04 由 TC-SUPP; TC-UIOP-10/11 由 TC-UIOP2; FILEDL 结果以 FILEDL2 之后为准
   order: [TC-I, TC-B, TC-N, TC-ISO, TC-UIOP, TC-SUPP, TC-FAV, TC-UPLOAD, TC-RES,
           TC-UX, TC-UIOP2, TC-UIOP3, FILEDL, FILEDL2, UXFILE]
+  # 冒烟集(--smoke 一键跑): 登录 + 多租户业务 + 文件隔离核心链路, 快速覆盖最核心功能
+  smoke: [TC-I, TC-B, TC-ISO]
 
 report:
   title: "CoreBridge 多租户前端工作台 — 测试报告(汇总)"

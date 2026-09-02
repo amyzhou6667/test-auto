@@ -81,6 +81,9 @@ python yaml_generator.py docs/需求文档.md --output scripts/xxx.yaml
 python script_runner.py scripts/xxx.yaml --url http://目标地址 --api-base http://api.目标地址 --retries 1
 #   --api-base  API 基站地址(默认取环境变量 TEST_API_BASE,再回退 YAML params.api_base)
 #   --retries   每条步骤最多尝试次数,默认 1(失败不重试)
+#   --project   产物归属项目(projects/<名>/), 截图/报告/history 写入该项目 out/ 下;
+#               缺省读脚本 metadata.project 兜底; 都没有则用仓库根 reports/ 旧路径
+#               脚本也可在 metadata 里写 project: <名> 声明归属
 
 # 一步完成：生成后直接执行
 python yaml_generator.py docs/需求文档.md --run
@@ -97,6 +100,9 @@ python run_project.py --project corebridge
 
 # 只执行指定模块（大小写不敏感）
 python run_project.py --project corebridge TC-I TC-UIOP3
+
+# 只跑冒烟集（项目配置 modules.smoke, corebridge 为 TC-I/TC-B/TC-ISO）
+python run_project.py --project corebridge --smoke
 
 # 合并各模块最新运行结果为一份最终报告（自动发现 out/results/ 下最新结果文件）
 python run_consolidate.py --project corebridge

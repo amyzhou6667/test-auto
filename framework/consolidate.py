@@ -13,10 +13,19 @@
 from datetime import datetime
 from pathlib import Path
 
+from framework.report import _unique_path
+
 
 def load(path):
+    """读取 results JSON，返回 (meta, rows)。
+
+    新格式 {meta, results} 取 meta 与结果列表；老格式（裸 list）兼容，meta 记为空 dict。
+    """
     import json
-    return json.load(open(path, encoding="utf-8"))
+    data = json.load(open(path, encoding="utf-8"))
+    if isinstance(data, dict) and "results" in data:
+        return data.get("meta") or {}, data["results"]
+    return {}, data
 
 
 def result_files(results_dir):
@@ -25,17 +34,25 @@ def result_files(results_dir):
     return files
 
 
-def find_base(first_id, files, bad_runs):
-    """取首条用例 id 以 first_id 开头的最新一次运行(全量运行)。"""
+def find_base(first_id, files, bad_runs, module=None):
+    """取 base 模块的最新一次运行(全量运行)。
+
+    有 module 且文件 meta 含 modules 时按模块名精确匹配（消除首条 id 前缀误判）；
+    否则回退首条用例 id 以 first_id 开头的旧逻辑（兼容老格式文件）。
+    """
     for p in reversed(files):
         if p.name in bad_runs:
             continue
         try:
-            data = load(p)
+            meta, rows = load(p)
         except Exception:
             continue
-        if data and data[0].get("id", "").startswith(first_id):
-            return p, data
+        if module and meta.get("modules"):
+            if module in meta["modules"]:
+                return p, rows
+            continue
+        if rows and rows[0].get("id", "").startswith(first_id):
+            return p, rows
     return None, None
 
 
@@ -49,13 +66,13 @@ def find_supp(anchors, files, bad_runs, consumed):
         if p.name in bad_runs or p in consumed:
             continue
         try:
-            data = load(p)
+            _, rows = load(p)
         except Exception:
             continue
         if any(r.get("status") not in ("待补充", "") and
                r.get("id") in anchors
-               for r in data):
-            return p, data
+               for r in rows):
+            return p, rows
     return None, None
 
 
@@ -90,7 +107,7 @@ def render_report(cfg, results_dir=None, print_summary=True):
     for item in base:
         module = item["module"]
         first_id = item["first_id"]
-        path, data = find_base(first_id, files, bad_runs)
+        path, data = find_base(first_id, files, bad_runs, module=module)
         if not path:
             print(f"[警告] 未找到 {module} 的全量运行(首条 id 以 {first_id} 开头)")
             continue
@@ -182,7 +199,7 @@ def render_report(cfg, results_dir=None, print_summary=True):
     out_dir = cfg.resolve_path("reports")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_name = (report_cfg.get("output_name") or "测试报告汇总_{ts}.md")
-    out = out_dir / out_name.format(ts=datetime.now().strftime("%Y%m%d_%H%M%S"))
+    out = _unique_path(out_dir / out_name.format(ts=datetime.now().strftime("%Y%m%d_%H%M%S")))
     out.write_text(md, encoding="utf-8")
     if print_summary:
         print(md)
