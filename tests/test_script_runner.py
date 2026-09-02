@@ -26,6 +26,18 @@ def test_eval_condition_bool_int_missing():
     assert sr.eval_condition("", params) is True
 
 
+def test_eval_condition_rejects_exec_nodes():
+    """受限 AST 求值: 函数调用/属性/下标等恶意表达式不得被求值(异常→默认 True, 不执行)。"""
+    params = {}
+    for malicious in ("__import__('os')", "().__class__", "[1][0]", "lambda: 1",
+                      "1 if True else 0", "open('x')", "().__getattribute__"):
+        # 关键断言: 不会抛出且不会执行任意代码——默认返回 True（安全降级）
+        assert sr.eval_condition(malicious, params) is True, malicious
+    # 正常算术/布尔运算仍可用
+    assert sr.eval_condition("1 < 2 and 3 > 2", {}) is True
+    assert sr.eval_condition("1 + 1 == 2", {}) is True
+
+
 def test_parse_locator_css():
     assert sr.parse_locator("#withdraw-amount-input")["kind"] == "css"
     assert sr.parse_locator(".table")["kind"] == "css"

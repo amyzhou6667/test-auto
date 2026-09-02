@@ -15,10 +15,11 @@ from pathlib import Path
 
 try:
     import yaml
-except ImportError:  # 与 script_runner.py 同款自愈逻辑
+except ImportError:
     import sys
-    os.system(f"{sys.executable} -m pip install pyyaml -q")
-    import yaml
+    print("缺少依赖 pyyaml：请先 `pip install -r requirements.txt`（含 pyyaml）再运行。",
+          file=sys.stderr)
+    sys.exit(1)
 
 ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-[^}]*)?\}")
 
