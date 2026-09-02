@@ -26,7 +26,7 @@
 ## 快速导航
 
 ```
-framework/       通用引擎（config/engine/registry/report/consolidate/loader/cli/util）
+framework/       通用引擎（config/engine/registry/report/consolidate/loader/cli/util/verify）
 run_project.py   管线2入口: --project <名> [模块...] / --list / --all
 run_consolidate.py  汇总入口: --project <名> [results_dir]
 projects/
