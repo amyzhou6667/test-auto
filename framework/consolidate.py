@@ -13,7 +13,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from framework.report import _unique_path, escape_cell
+from framework.report import _unique_path, escape_cell, evidence_ref
 
 
 def load(path):
@@ -150,6 +150,7 @@ def render_report(cfg, results_dir=None, print_summary=True):
 
     counts = {s: sum(1 for r in rows if r["status"] == s) for s in stats}
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    out_dir = cfg.resolve_path("reports")  # 提前定义，供 evidence 相对路径使用
 
     lines = [
         f"# {report_cfg.get('title', '测试报告(汇总)')}",
@@ -172,7 +173,7 @@ def render_report(cfg, results_dir=None, print_summary=True):
     ])
     for r in rows:
         icon = icons.get(r["status"], "❓")
-        ev = f"`{Path(r['evidence']).name}`" if r.get("evidence") else ""
+        ev = f"`{evidence_ref(r.get('evidence'), out_dir)}`" if r.get("evidence") else ""
         act = escape_cell(r.get("actual"))
         det = escape_cell(r.get("detail"))
         nm = escape_cell(r.get("name"))
@@ -196,7 +197,6 @@ def render_report(cfg, results_dir=None, print_summary=True):
     lines.append("")
 
     md = "\n".join(lines)
-    out_dir = cfg.resolve_path("reports")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_name = (report_cfg.get("output_name") or "测试报告汇总_{ts}.md")
     out = _unique_path(out_dir / out_name.format(ts=datetime.now().strftime("%Y%m%d_%H%M%S")))

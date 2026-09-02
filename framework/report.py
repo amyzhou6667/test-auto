@@ -7,6 +7,7 @@ r"""报告生成：保存 results JSON + 渲染 Markdown。
   - 统计口径来自 cfg.status.stats（「待补充」等扩展状态可配置是否计入）
 """
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -45,7 +46,7 @@ def save_report(runner, cfg, modules=None):
     }
     jpath = _unique_path(result_dir / f"results_{ts}.json")
     jpath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    md = build_markdown(data, cfg)
+    md = build_markdown(data, cfg, report_dir=result_dir)
     mpath = _unique_path(result_dir / f"report_{ts}.md")
     mpath.write_text(md, encoding="utf-8")
     print(f"\n  📄 报告已保存: {mpath}")
@@ -59,8 +60,11 @@ def save_report(runner, cfg, modules=None):
     return jpath, mpath
 
 
-def build_markdown(data, cfg):
-    """渲染单次运行 Markdown 报告。标题/地址/页脚来自项目配置。"""
+def build_markdown(data, cfg, report_dir=None):
+    """渲染单次运行 Markdown 报告。标题/地址/页脚来自项目配置。
+
+    report_dir: 报告落盘目录；提供时 evidence 输出相对路径（便于报告整体移动/分享）。
+    """
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     report_cfg = cfg.report or {}
     stats = cfg.status_stats() or ["通过", "失败", "无法验证"]
@@ -80,8 +84,8 @@ def build_markdown(data, cfg):
     ]
     for r in data:
         icon = icons.get(r["status"], "❓")
-        # evidence 与汇总报告一致取 basename（绝对路径仅用于落盘诊断）
-        ev = f"`{Path(r['evidence']).name}`" if r.get("evidence") else ""
+        # evidence: 提供 report_dir 时取相对路径(与汇总报告/管线1截图一致), 否则 basename
+        ev = f"`{evidence_ref(r.get('evidence'), report_dir)}`" if r.get("evidence") else ""
         # 单元格转义: | → \| , 换行 → 空格（修表格撑破）
         act = escape_cell(r.get("actual", ""))
         det = escape_cell(r.get("detail", ""))
@@ -99,6 +103,22 @@ def _count(data, status):
 def escape_cell(text):
     r"""Markdown 表格单元格转义：| → \| ，换行 → 空格（单次与汇总报告统一使用）。"""
     return (text or "").replace("|", "\\|").replace("\n", " ")
+
+
+def evidence_ref(path, report_dir=None):
+    """证据引用：报告目录已知时输出相对路径（便于报告整体移动），否则取 basename。
+
+    单次/汇总报告统一使用；管线1截图走相对路径，管线2 evidence 也一致化。
+    """
+    if not path:
+        return ""
+    try:
+        if report_dir is not None:
+            rel = os.path.relpath(str(path), str(report_dir))
+            return rel.replace("\\", "/")
+    except (OSError, ValueError):
+        pass
+    return Path(path).name
 
 
 def _fmt(text):

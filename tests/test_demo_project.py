@@ -3,9 +3,9 @@
 
 monkeypatch 掉 Runner.start/close（不启动真实浏览器），走 run_project.main 全链路，
 验证 hooks 加载、@module 注册、模块执行、报告落盘。
+产物目录重定向到 tmp_path，不污染真实 projects/demo/out/。
 """
 import os
-from pathlib import Path
 
 from framework.config import load_project
 
@@ -30,17 +30,27 @@ def test_demo_project_runs_report(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(Runner, "start", _fake_start)
     monkeypatch.setattr(Runner, "close", _fake_close)
 
+    # 产物路径重定向到 tmp_path（demo 配置 paths 覆盖为绝对路径）
+    def _load_to_tmp(name, repo_root, strict=True):
+        cfg = load_project(name, repo_root, strict)
+        base = tmp_path / "out"
+        for key in ("results", "screenshots", "reports", "evidence"):
+            cfg.paths[key] = str(base / key)
+        return cfg
+
     import run_project
+    monkeypatch.setattr(run_project, "load_project", _load_to_tmp)
+
     run_project.main(["--project", "demo"])
 
     out = capsys.readouterr().out
     assert "SMOKE-01" in out
     assert "通过" in out
 
-    cfg = load_project("demo", REPO_ROOT)
-    files = list(cfg.resolve_path("results").glob("results_*.json"))
+    results_dir = tmp_path / "out" / "results"
+    files = list(results_dir.glob("results_*.json"))
     assert files, "demo 应生成 results_*.json"
-    report_files = list(cfg.resolve_path("results").glob("report_*.md"))
+    report_files = list(results_dir.glob("report_*.md"))
     assert report_files, "demo 应生成 report_*.md"
 
 
