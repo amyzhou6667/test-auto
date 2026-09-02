@@ -282,6 +282,7 @@ class ScriptRunner:
         # 产物目录：默认仓库根旧路径；指定 --project 时在 load_script 内按项目配置覆盖
         self.screenshot_dir = Path(__file__).parent / "screenshots"
         self.report_dir = Path(__file__).parent / "reports"
+        self._ss_seq = 0  # 截图文件名序号，防同秒覆盖（与 engine.py Runner._seq 同款）
 
     def load_script(self):
         with open(self.script_path, encoding="utf-8") as f:
@@ -933,8 +934,9 @@ class ScriptRunner:
     async def take_screenshot(self, name: str) -> str:
         """截图保存，返回文件路径"""
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+        self._ss_seq += 1
         ts = datetime.now().strftime("%H%M%S")
-        filename = f"{name}_{ts}.png"
+        filename = f"{name}_{ts}_{self._ss_seq:02d}.png"
         path = self.screenshot_dir / filename
         try:
             await self.page.screenshot(path=str(path))

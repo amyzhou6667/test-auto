@@ -25,6 +25,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
+        if args.project is None:
+            sys.exit(cli.list_projects_and_exit(ROOT, prog="run_consolidate"))
         # consolidate 只读 results/report/consolidate 配置节，不需要账号 env → 宽松模式
         cfg = load_project(args.project, ROOT, strict=False)
     except Exception as e:

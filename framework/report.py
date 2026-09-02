@@ -83,9 +83,9 @@ def build_markdown(data, cfg):
         # evidence 与汇总报告一致取 basename（绝对路径仅用于落盘诊断）
         ev = f"`{Path(r['evidence']).name}`" if r.get("evidence") else ""
         # 单元格转义: | → \| , 换行 → 空格（修表格撑破）
-        act = _escape_cell(r.get("actual", ""))
-        det = _escape_cell(r.get("detail", ""))
-        nm = _escape_cell(r.get("name", ""))
+        act = escape_cell(r.get("actual", ""))
+        det = escape_cell(r.get("detail", ""))
+        nm = escape_cell(r.get("name", ""))
         lines.append(f"| {r['id']} | {nm} | {icon} {r['status']} | {act} | {det} | {ev} |")
     footer = (report_cfg.get("footer") or "由引擎自动生成 | {now}").format(now=now)
     lines.extend(["", "---", f"*{footer}*", ""])
@@ -96,7 +96,8 @@ def _count(data, status):
     return sum(1 for r in data if r["status"] == status)
 
 
-def _escape_cell(text):
+def escape_cell(text):
+    r"""Markdown 表格单元格转义：| → \| ，换行 → 空格（单次与汇总报告统一使用）。"""
     return (text or "").replace("|", "\\|").replace("\n", " ")
 
 

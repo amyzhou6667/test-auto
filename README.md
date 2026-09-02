@@ -95,7 +95,7 @@ python yaml_generator.py docs/需求文档.md --run
 # 列出项目已注册模块（不执行）
 python run_project.py --project corebridge --list
 
-# 执行全部模块（--project 缺省 corebridge）
+# 执行全部模块（--project 缺省时列出可用项目）
 python run_project.py --project corebridge
 
 # 只执行指定模块（大小写不敏感）

@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
-"""framework.cli 单测：resolve_modules 的 --smoke / --all / 模块名解析。"""
+"""framework.cli 单测：resolve_modules 的 --smoke / --all / 模块名解析 + 可用项目列举。"""
+import os
+
 from framework import cli
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ORDER = ["TC-I", "TC-B", "TC-N", "TC-ISO", "TC-UIOP"]
 SMOKE = ["TC-I", "TC-B", "TC-ISO"]
@@ -48,3 +52,12 @@ def test_no_modules_defaults_to_all():
     mods, invalid = cli.resolve_modules(_Args(), ORDER)
     assert mods == ORDER
     assert invalid == []
+
+
+# ─────────── available_projects ───────────
+def test_available_projects_lists_real_projects():
+    names = cli.available_projects(REPO_ROOT)
+    assert "demo" in names
+    assert "corebridge" in names
+    # 排序且唯一
+    assert names == sorted(set(names))

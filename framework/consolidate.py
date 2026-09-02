@@ -13,7 +13,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from framework.report import _unique_path
+from framework.report import _unique_path, escape_cell
 
 
 def load(path):
@@ -173,9 +173,9 @@ def render_report(cfg, results_dir=None, print_summary=True):
     for r in rows:
         icon = icons.get(r["status"], "❓")
         ev = f"`{Path(r['evidence']).name}`" if r.get("evidence") else ""
-        act = (r.get("actual") or "").replace("|", "/").replace("\n", " ")
-        det = (r.get("detail") or "").replace("|", "/").replace("\n", " ")
-        nm = (r.get("name") or "").replace("|", "/").replace("\n", " ")
+        act = escape_cell(r.get("actual"))
+        det = escape_cell(r.get("detail"))
+        nm = escape_cell(r.get("name"))
         lines.append(f"| {r['id']} | {nm} | {icon} {r['status']} | {act} | {det} | {ev} |")
 
     lines.append("")

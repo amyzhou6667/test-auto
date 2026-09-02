@@ -18,7 +18,7 @@ description: 测试用例驱动执行（管线2）。从项目配置读取模块
 # 列出项目已注册模块（不执行）
 python run_project.py --project corebridge --list
 
-# 执行全部模块（--project 缺省 corebridge）
+# 执行全部模块（--project 必填, 缺省时列出可用项目）
 python run_project.py --project corebridge
 
 # 只执行指定模块（大小写不敏感）

@@ -69,6 +69,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
+        if args.project is None:
+            sys.exit(cli.list_projects_and_exit(ROOT))
         cfg = load_project(args.project, ROOT, strict=not args.list)
     except Exception as e:
         print(f"[错误] {e}")

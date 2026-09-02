@@ -166,7 +166,7 @@ def load_project(project_name, repo_root, strict=True):
 
     repo_root: 仓库根目录（含 projects/ 与 framework/）。
     strict: 缺失必填环境变量是否抛错（--list 等只读操作传 False，缺的变量保留 ${VAR} 原样）。
-    返回 ProjectConfig。env 注入顺序：os.environ → 项目目录 .env（项目 .env 优先于仓库根 .env）。
+    返回 ProjectConfig。env 注入顺序：os.environ → 仓库根 .env（兜底）→ 项目目录 .env（优先）。
     """
     repo_root = Path(repo_root)
     project_dir = repo_root / "projects" / project_name
@@ -177,10 +177,10 @@ def load_project(project_name, repo_root, strict=True):
     with open(yaml_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
-    # 环境变量合并: os.environ 基础, 项目 .env 覆盖, 仓库根 .env 兜底
+    # 环境变量合并: os.environ 基础, 仓库根 .env 兜底, 项目 .env 覆盖(项目优先)
     environ = dict(os.environ)
-    for env_path in (project_dir / ".env", repo_root / ".env"):
-        environ.update(load_dotenv(env_path))
+    environ.update(load_dotenv(repo_root / ".env"))
+    environ.update(load_dotenv(project_dir / ".env"))
 
     missing = []
     resolved = resolve_env(raw, environ, missing)
