@@ -124,6 +124,7 @@ class ProjectConfig:
         self.report = raw.get("report") or {}
         self.consolidate = raw.get("consolidate") or {}
         self.status = raw.get("status") or {}
+        self.execution = raw.get("execution") or {}
 
     # ── 路径解析（相对项目根 → 绝对） ──
     def resolve_path(self, key):

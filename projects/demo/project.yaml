@@ -19,6 +19,10 @@ browser:
 
 base_url: ${DEMO_BASE_URL:-http://demo.example.com}
 
+execution:
+  retry: 1
+  timeout: 120
+
 modules:
   order: [SMOKE]
   smoke: [SMOKE]

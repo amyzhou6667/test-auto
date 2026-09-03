@@ -118,6 +118,11 @@ evidence:
     uxfile_d2: "UX-07_租户2取租户1文件URL.txt"
     ux06: "UX-06_同账号跨租户文件直链响应.txt"
 
+# 用例执行策略
+execution:
+  retry: 1          # 失败/异常后重试 1 次（flaky 容忍）
+  timeout: 120      # 单条用例 120 秒超时（防卡死）
+
 modules:
   # 执行顺序 == 原 ALLOWED(15 项, 2371)。顺序决定报告内容: 后执行模块覆盖先执行模块的同 id 结果。
   # 跨模块覆盖意图(文档化): TC-UIOP-08/04/05 由 TC-UIOP3 后覆盖; TC-UIOP-09 由 TC-FAV;

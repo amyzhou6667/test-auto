@@ -164,3 +164,67 @@ def test_run_case_table_exception_sets_cannot_verify(tmp_path):
     assert runner.results["C-1"].status == "通过"
     assert runner.results["C-2"].status == "无法验证"
     assert "执行异常" in runner.results["C-2"].actual
+
+
+# ─────────── run_case_table 重试/超时 ───────────
+def test_run_case_table_retry_success_on_second_attempt(tmp_path):
+    """第一次异常、第二次通过 → 最终「通过」。"""
+    cfg = make_cfg(tmp_path)
+    cfg.execution = {"retry": 1, "timeout": 0}
+    runner = Runner(cfg=cfg)
+    call_count = {"n": 0}
+
+    async def flaky(runner):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise RuntimeError("transient")
+        runner.set_result("F-1", "抖动用例", "通过", "", "")
+
+    asyncio.run(run_case_table(runner, [("F-1", flaky, "抖动用例")]))
+    assert call_count["n"] == 2
+    assert runner.results["F-1"].status == "通过"
+
+
+def test_run_case_table_retry_exhausted(tmp_path):
+    """每次都异常，重试耗尽 → 最终「无法验证」。"""
+    cfg = make_cfg(tmp_path)
+    cfg.execution = {"retry": 2, "timeout": 0}
+    runner = Runner(cfg=cfg)
+
+    async def always_boom(runner):
+        raise RuntimeError("permanent")
+
+    asyncio.run(run_case_table(runner, [("B-1", always_boom, "必挂")]))
+    assert runner.results["B-1"].status == "无法验证"
+    assert "执行异常" in runner.results["B-1"].actual
+
+
+def test_run_case_table_timeout(tmp_path):
+    """用例超时 → 「无法验证」+ 超时信息。"""
+    cfg = make_cfg(tmp_path)
+    cfg.execution = {"retry": 0, "timeout": 1}
+    runner = Runner(cfg=cfg)
+
+    async def slow(runner):
+        import asyncio as _aio
+        await _aio.sleep(10)
+
+    asyncio.run(run_case_table(runner, [("T-1", slow, "慢用例")]))
+    assert runner.results["T-1"].status == "无法验证"
+    assert "超时" in runner.results["T-1"].actual
+
+
+def test_run_case_table_no_retry_when_success(tmp_path):
+    """成功用例只执行一次，retry 不影响正常用例。"""
+    cfg = make_cfg(tmp_path)
+    cfg.execution = {"retry": 3, "timeout": 0}
+    runner = Runner(cfg=cfg)
+    call_count = {"n": 0}
+
+    async def ok(runner):
+        call_count["n"] += 1
+        runner.set_result("O-1", "正常", "通过", "", "")
+
+    asyncio.run(run_case_table(runner, [("O-1", ok, "正常")]))
+    assert call_count["n"] == 1
+    assert runner.results["O-1"].status == "通过"

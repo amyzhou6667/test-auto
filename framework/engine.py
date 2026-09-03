@@ -10,6 +10,7 @@
   - _on_response 的两条 CoreBridge 嗅探 → 改为配置驱动嗅探规则表
   - 状态图标表（原 248/349 两份重复）→ 统一从 cfg.status.icons 读取
 """
+import asyncio
 from datetime import datetime
 
 from playwright.async_api import async_playwright
@@ -161,11 +162,34 @@ async def run_case_table(runner, cases):
 
     cases: [(case_id, callable, name), ...]，callable 签名 async (runner)。
     异常时结果归为「无法验证」（区别于真实的「失败」）。
+
+    从 runner.cfg.execution 读取:
+      retry:   失败/异常后重试次数（默认 0 = 不重试）
+      timeout: 单条用例超时秒数（默认 0 = 不限）
     """
+    exec_cfg = (runner.cfg.execution if runner.cfg else {}) or {}
+    max_retries = int(exec_cfg.get("retry", 0))
+    timeout_s = int(exec_cfg.get("timeout", 0))
+
     for cid, fn, name in cases:
-        try:
-            await fn(runner)
-        except Exception as e:
-            runner.set_result(cid, name, "无法验证",
-                              actual=f"执行异常: {str(e)[:100]}",
-                              detail="自动化异常", evidence="")
+        for attempt in range(1 + max_retries):
+            try:
+                if timeout_s > 0:
+                    await asyncio.wait_for(fn(runner), timeout=timeout_s)
+                else:
+                    await fn(runner)
+                break  # 成功，跳出重试循环
+            except asyncio.TimeoutError:
+                if attempt < max_retries:
+                    print(f"  ⏱️ {cid} 超时(第 {attempt+1} 次)，重试...")
+                    continue
+                runner.set_result(cid, name, "无法验证",
+                                  actual=f"执行超时({timeout_s}s)",
+                                  detail="自动化超时", evidence="")
+            except Exception as e:
+                if attempt < max_retries:
+                    print(f"  ⚠️ {cid} 异常(第 {attempt+1} 次)，重试...")
+                    continue
+                runner.set_result(cid, name, "无法验证",
+                                  actual=f"执行异常: {str(e)[:100]}",
+                                  detail="自动化异常", evidence="")
