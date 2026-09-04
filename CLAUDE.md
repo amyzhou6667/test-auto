@@ -11,7 +11,7 @@
 
 | 不要读 | 原因 | 替代做法 |
 |---|---|---|
-| `projects/corebridge/hooks/modules/*.py`（15 个文件 ~1650 行） | 是 execute_test_cases v1 的 1:1 迁移，行为等价 | 要看模块清单：`python run_project.py --project corebridge --list`；要看配置：读 `projects/corebridge/project.yaml` |
+| `projects/cb-workbench/hooks/modules/*.py`（15 个文件 ~1650 行） | 是 execute_test_cases v1 的 1:1 迁移，行为等价 | 要看模块清单：`python run_project.py --project cb-workbench --list`；要看配置：读 `projects/cb-workbench/project.yaml` |
 | `legacy/` | 通用化前单体备份（gitignore，含明文 ID），仅供比对参考 | 不需要看 |
 | `projects/*/out/`、`results/`、`reports/`、`screenshots/`、`.playwright-mcp/` | 每次运行的产物/截图 | 不读，除非用户要看具体截图 |
 | `probe_*.py` | 一次性探针（gitignore） | 不读 |
@@ -31,8 +31,8 @@ framework/       通用引擎（config/engine/registry/report/consolidate/loader
 run_project.py   管线2入口: --project <名> [模块...] / --list / --all
 run_consolidate.py  汇总入口: --project <名> [results_dir]
 projects/
-  corebridge/    第一个项目（project.yaml + hooks/ + fixtures/ + .env.example）
-  demo/          最小假项目（零浏览器依赖，验证引擎通用性）
+  cb-workbench/  第一个项目（project.yaml + hooks/ + fixtures/ + .env.example）
+  cb-frontend/   最小假项目（零浏览器依赖，验证引擎通用性）
 execute_test_cases.py / consolidate_report.py   兼容壳(deprecated, 转调 run_project/run_consolidate)
 yaml_generator.py / script_runner.py  管线1（已通用, 勿改纯函数签名——会打破 15 个单测）
 tests/           72 个单测（29 旧 + 43 新），不依赖浏览器
@@ -43,17 +43,17 @@ CHANGELOG.md     功能变动记录（由 /record-change 自动维护）
 
 ```bash
 python -m pytest tests/ -q                          # 单测（唯一推荐的验证方式）
-python run_project.py --project corebridge --list   # 看模块清单（省 token 首选）
-python run_project.py --project corebridge TC-I     # 跑单模块（真实浏览器, 需 .env 有账号）
-python run_project.py --project corebridge --smoke  # 只跑冒烟集 (modules.smoke)
-python run_consolidate.py --project corebridge      # 汇总报告
-python run_project.py --project demo                # demo 假项目（不碰浏览器, 验证引擎）
+python run_project.py --project cb-workbench --list   # 看模块清单（省 token 首选）
+python run_project.py --project cb-workbench TC-I     # 跑单模块（真实浏览器, 需 .env 有账号）
+python run_project.py --project cb-workbench --smoke  # 只跑冒烟集 (modules.smoke)
+python run_consolidate.py --project cb-workbench      # 汇总报告
+python run_project.py --project cb-frontend           # cb-frontend 假项目（不碰浏览器, 验证引擎）
 /record-change <描述>                               # 记录功能变动到 CHANGELOG.md 并同步文档
 ```
 
 ## 新增项目怎么做
 
-复制 `projects/demo/` → 改 `project.yaml`（项目名/地址/账号/模块顺序/报告）→ 在 `hooks/` 写 `@module` 模块。
+复制 `projects/cb-frontend/` → 改 `project.yaml`（项目名/地址/账号/模块顺序/报告）→ 在 `hooks/` 写 `@module` 模块。
 全程不改 `framework/` 与 `run_project.py`。详见 README「新增项目指南」；需要时让 Claude 搭骨架，不要自己读全部 hooks 参考。
 
 ## 安全约定

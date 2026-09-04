@@ -7,6 +7,16 @@
 
 <!-- 变动记录从这里开始，新条目插入到本行下方 -->
 
+## 2026-09-04 — 项目目录重命名（corebridge→cb-workbench, demo→cb-frontend）
+
+- **类型**: refactor
+- **范围**: project:cb-workbench / project:cb-frontend
+- **改动文件**:
+  - `projects/corebridge/` → `projects/cb-workbench/` — 全部 24 个文件平移，项目名改为 workbench 工作台
+  - `projects/demo/` → `projects/cb-frontend/` — 全部 6 个文件平移，项目名改为 cb-frontend
+- **详情**: 两个项目目录重命名以更准确反映业务含义：corebridge 改为 cb-workbench（工作台），demo 改为 cb-frontend（多租户管理前端）。纯目录重命名，文件内容未改动
+- **关联文档**: `CLAUDE.md`（快速导航/常用命令中的旧名称需更新）、`USAGE.md`（项目结构中的旧名称需更新）
+
 ## 2026-09-04 — 新增功能变动记录 skill (`/record-change`)
 
 - **类型**: feat

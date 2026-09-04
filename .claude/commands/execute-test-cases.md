@@ -16,19 +16,19 @@ description: 测试用例驱动执行（管线2）。从项目配置读取模块
 
 ```
 # 列出项目已注册模块（不执行）
-python run_project.py --project corebridge --list
+python run_project.py --project cb-workbench --list
 
 # 执行全部模块（--project 必填, 缺省时列出可用项目）
-python run_project.py --project corebridge
+python run_project.py --project cb-workbench
 
 # 只执行指定模块（大小写不敏感）
-python run_project.py --project corebridge TC-I TC-UIOP3
+python run_project.py --project cb-workbench TC-I TC-UIOP3
 
 # 汇总合并报告
-python run_consolidate.py --project corebridge
+python run_consolidate.py --project cb-workbench
 ```
 
-旧入口仍可用（等价于 --project corebridge）：`python execute_test_cases.py TC-I`
+旧入口仍可用（等价于 --project cb-workbench）：`python execute_test_cases.py TC-I`
 
 ## 模块与用例编号（CoreBridge 实际实现，与 TC-001/TC-FUNC 分类无关）
 
@@ -46,7 +46,7 @@ python run_consolidate.py --project corebridge
 
 ## 账号与环境变量
 
-- 账号 hex ID 不存仓库：复制 `projects/corebridge/.env.example` 为 `.env` 填入真实值
+- 账号 hex ID 不存仓库：复制 `projects/cb-workbench/.env.example` 为 `.env` 填入真实值
 - 缺失变量启动时会一次性报错列出，不会静默留空
 - 依赖浏览器：`playwright install chromium`（headless 由 project.yaml browser 控制）
 
