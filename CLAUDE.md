@@ -22,6 +22,7 @@
 - 模块/用例信息 → 跑 `--list`，不要读 hooks 源码
 - 验证改动 → 跑 `python -m pytest tests/ -q`（72 个单测，纯函数无浏览器），不要逐个读测试文件
 - CoreBridge 专属细节 → 查记忆文件 `corebridge-testing-notes.md` / `corebridge-test-url.md`（紧凑）
+- 功能变动记录 → 查 `CHANGELOG.md`（每次功能改动后用 `/record-change` 记录并同步文档）
 
 ## 快速导航
 
@@ -35,6 +36,7 @@ projects/
 execute_test_cases.py / consolidate_report.py   兼容壳(deprecated, 转调 run_project/run_consolidate)
 yaml_generator.py / script_runner.py  管线1（已通用, 勿改纯函数签名——会打破 15 个单测）
 tests/           72 个单测（29 旧 + 43 新），不依赖浏览器
+CHANGELOG.md     功能变动记录（由 /record-change 自动维护）
 ```
 
 ## 常用命令
@@ -46,6 +48,7 @@ python run_project.py --project corebridge TC-I     # 跑单模块（真实浏�
 python run_project.py --project corebridge --smoke  # 只跑冒烟集 (modules.smoke)
 python run_consolidate.py --project corebridge      # 汇总报告
 python run_project.py --project demo                # demo 假项目（不碰浏览器, 验证引擎）
+/record-change <描述>                               # 记录功能变动到 CHANGELOG.md 并同步文档
 ```
 
 ## 新增项目怎么做
